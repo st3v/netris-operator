@@ -22,13 +22,14 @@ import (
 	"time"
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
-	"github.com/netrisai/netris-operator/configloader"
 	"github.com/netrisai/netris-operator/netrisstorage"
 )
 
-func init() {
-	if configloader.Root.RequeueInterval > 0 {
-		requeueInterval = time.Duration(time.Duration(configloader.Root.RequeueInterval) * time.Second)
+// InitRequeueInterval sets the requeue interval from config.
+// This must be called from main() after configloader.Load().
+func InitRequeueInterval(interval int) {
+	if interval > 0 {
+		requeueInterval = time.Duration(time.Duration(interval) * time.Second)
 		contextTimeout = requeueInterval
 	}
 }

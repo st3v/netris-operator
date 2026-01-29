@@ -29,7 +29,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/calicowatcher/calico"
-	"github.com/netrisai/netris-operator/configloader"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/v2/types/site"
 	"github.com/netrisai/netriswebapi/v2/types/vnet"
@@ -92,6 +91,7 @@ type data struct {
 type Options struct {
 	RequeueInterval int
 	LogLevel        string
+	CalicoASNRange  string
 }
 
 // NewWatcher is the main initialization function.
@@ -126,8 +126,8 @@ func (w *Watcher) start() {
 	// recorder, w, _ := eventRecorder(clientset)
 	// defer w.Stop()
 	w.data = data{}
-	if len(configloader.Root.CalicoASNRange) > 0 {
-		a, b, err := w.validateASNRange(configloader.Root.CalicoASNRange)
+	if len(w.Options.CalicoASNRange) > 0 {
+		a, b, err := w.validateASNRange(w.Options.CalicoASNRange)
 		if err != nil {
 			logger.Error(err, "")
 			return

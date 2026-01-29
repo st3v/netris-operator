@@ -1,13 +1,17 @@
 package configloader
 
 import (
-	"log"
+	"errors"
+	"io"
 	"os"
-	"path"
+
+	"github.com/kelseyhightower/envconfig"
+	"gopkg.in/yaml.v2"
 )
 
-type config struct {
-	Controller      controller `yaml:"controller"`
+// Config holds the application configuration.
+type Config struct {
+	Controller      Controller `yaml:"controller"`
 	LogDevMode      bool       `yaml:"logdevmode" envconfig:"NOPERATOR_DEV_MODE"`
 	RequeueInterval int        `yaml:"requeueinterval" envconfig:"NOPERATOR_REQUEUE_INTERVAL"`
 	CalicoASNRange  string     `yaml:"calicoasnrange" envconfig:"NOPERATOR_CALICO_ASN_RANGE"`
@@ -15,32 +19,41 @@ type config struct {
 	VPCID           int        `yaml:"vpcid" envconfig:"NOPERATOR_VPC_ID"`
 }
 
-type controller struct {
+// Controller holds the Netris controller connection configuration.
+type Controller struct {
 	Host     string `yaml:"host" envconfig:"CONTROLLER_HOST"`
 	Login    string `yaml:"login" envconfig:"CONTROLLER_LOGIN"`
 	Password string `yaml:"password" envconfig:"CONTROLLER_PASSWORD"`
 	Insecure bool   `yaml:"insecure" envconfig:"CONTROLLER_INSECURE"`
 }
 
-// Root .
-var Root *config
-
-func init() {
-	wd, err := os.Getwd()
+// Load initializes the configuration from the given config file path and
+// environment variables. Environment variables override file values.
+// Returns the loaded configuration or an error.
+func Load(path string) (Config, error) {
+	f, err := os.Open(path)
 	if err != nil {
-		panic(err)
+		return Config{}, err
+	}
+	defer f.Close()
+
+	cfg, err := readConfig(f)
+	if err != nil {
+		return cfg, err
 	}
 
-	ptr := &config{}
-	err = Unmarshal(path.Join(wd, "configloader", "config.yml"), ptr)
-	Root = ptr
-	if err != nil {
-		log.Fatalf("configloader error: %v", err)
-	} else {
-		if len(ptr.Controller.Host) == 0 {
-			log.Fatalln("Please set netris controller credentials")
-		} else {
-			log.Printf("connecting to host - %v", ptr.Controller.Host)
-		}
+	if len(cfg.Controller.Host) == 0 {
+		return cfg, errors.New("netris controller credentials not set")
 	}
+
+	return cfg, nil
+}
+
+// readConfig reads the configuration from the given reader.
+func readConfig(r io.Reader) (Config, error) {
+	cfg := Config{}
+	if err := yaml.NewDecoder(r).Decode(&cfg); err != nil {
+		return cfg, err
+	}
+	return cfg, envconfig.Process("", &cfg)
 }

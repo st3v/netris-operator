@@ -20,6 +20,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"path/filepath"
 
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,8 +42,10 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme     = runtime.NewScheme()
+	setupLog   = ctrl.Log.WithName("setup")
+	configPath = filepath.Join("configloader", "config.yml")
+
 	// cred stores the Netris API usepoint.
 	cred *api.Clientset
 
@@ -66,20 +69,31 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
 
-	if configloader.Root.LogDevMode {
+	// Load configuration from config.yml and environment variables
+	cfg, err := configloader.Load(configPath)
+	if err != nil {
+		log.Fatalf("failed to load configuration: %v", err)
+	}
+
+	log.Printf("connecting to host - %v", cfg.Controller.Host)
+
+	// Initialize controller requeue interval from config
+	controllers.InitRequeueInterval(cfg.RequeueInterval)
+
+	if cfg.LogDevMode {
 		ctrl.SetLogger(zap.New(zap.Level(zapcore.DebugLevel), zap.UseDevMode(false)))
 	} else {
 		ctrl.SetLogger(zap.New(zap.UseDevMode(false), zap.StacktraceLevel(zapcore.DPanicLevel)))
 	}
 
-	var err error
-	cred, err = api.Client(configloader.Root.Controller.Host, configloader.Root.Controller.Login, configloader.Root.Controller.Password, configloader.Root.RequeueInterval)
+	cred, err = api.Client(cfg.Controller.Host, cfg.Controller.Login, cfg.Controller.Password, cfg.RequeueInterval)
 	if err != nil {
 		log.Panicf("newHTTPCredentials error %v", err)
 	}
-	cred.Client.InsecureVerify(configloader.Root.Controller.Insecure)
-	err = cred.Client.LoginUser()
-	if err != nil {
+
+	cred.Client.InsecureVerify(cfg.Controller.Insecure)
+
+	if err := cred.Client.LoginUser(); err != nil {
 		log.Printf("LoginUser error %v", err)
 		os.Exit(1)
 	}
@@ -146,7 +160,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "BGPMeta")
 		os.Exit(1)
 	}
-	vpcid := configloader.Root.VPCID
+	vpcid := cfg.VPCID
 	if vpcid == 0 {
 		vpcid = 1
 	}
@@ -157,7 +171,7 @@ func main() {
 		Scheme:     mgr.GetScheme(),
 		Cred:       cred,
 		NStorage:   nStorage,
-		L4LBTenant: configloader.Root.L4lbTenant,
+		L4LBTenant: cfg.L4lbTenant,
 		VPCID:      vpcid,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "L4LB")
@@ -358,18 +372,18 @@ func main() {
 	// +kubebuilder:scaffold:builder
 
 	watcherLogLevel := "info"
-	if configloader.Root.LogDevMode {
+	if cfg.LogDevMode {
 		watcherLogLevel = "debug"
 	}
 
-	lbWatcher, err := lbwatcher.NewWatcher(nStorage, mgr, lbwatcher.Options{LogLevel: watcherLogLevel, RequeueInterval: configloader.Root.RequeueInterval})
+	lbWatcher, err := lbwatcher.NewWatcher(nStorage, mgr, lbwatcher.Options{LogLevel: watcherLogLevel, RequeueInterval: cfg.RequeueInterval})
 	if err != nil {
 		setupLog.Error(err, "problem running lbwatcher")
 		os.Exit(1)
 	}
 	go lbWatcher.Start()
 
-	cWatcher, err := calicowatcher.NewWatcher(nStorage, mgr, calicowatcher.Options{LogLevel: watcherLogLevel, RequeueInterval: configloader.Root.RequeueInterval})
+	cWatcher, err := calicowatcher.NewWatcher(nStorage, mgr, calicowatcher.Options{LogLevel: watcherLogLevel, RequeueInterval: cfg.RequeueInterval, CalicoASNRange: cfg.CalicoASNRange})
 	if err != nil {
 		setupLog.Error(err, "problem running calicowatcher")
 		os.Exit(1)
