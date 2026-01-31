@@ -24,12 +24,11 @@ import (
 	"github.com/netrisai/netriswebapi/v2/types/dhcp"
 )
 
-func makeGateway(gateway k8sv1alpha1.VNetGateway, dhcpOptionSetsByNames map[string]*dhcp.DHCPOptionSet) k8sv1alpha1.VNetMetaGateway {
+func makeGateway(gateway k8sv1alpha1.VNetGateway, dhcpOptionSetsByNames map[string]*dhcp.DHCPOptionSet) (k8sv1alpha1.VNetMetaGateway, error) {
 	version := ""
 	ip, ipNet, err := net.ParseCIDR(gateway.Prefix)
 	if err != nil {
-		fmt.Println(err)
-		return k8sv1alpha1.VNetMetaGateway{}
+		return k8sv1alpha1.VNetMetaGateway{}, fmt.Errorf("failed to parse CIDR %s: %w", gateway.Prefix, err)
 	}
 
 	if len(ip.To4()) == net.IPv4len {
@@ -54,7 +53,7 @@ func makeGateway(gateway k8sv1alpha1.VNetGateway, dhcpOptionSetsByNames map[stri
 			apiGateway.DHCPOptionSetID = optionSet.ID
 		}
 	}
-	return apiGateway
+	return apiGateway, nil
 }
 
 func regParser(valueMatch []string, subexpNames []string) map[string]string {

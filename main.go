@@ -46,9 +46,6 @@ var (
 	setupLog   = ctrl.Log.WithName("setup")
 	configPath = filepath.Join("configloader", "config.yml")
 
-	// cred stores the Netris API usepoint.
-	cred *api.Clientset
-
 	// nStorage is the instance of the Netris API in-memory storage.
 	nStorage *netrisstorage.Storage
 )
@@ -86,7 +83,7 @@ func main() {
 		ctrl.SetLogger(zap.New(zap.UseDevMode(false), zap.StacktraceLevel(zapcore.DPanicLevel)))
 	}
 
-	cred, err = api.Client(cfg.Controller.Host, cfg.Controller.Login, cfg.Controller.Password, cfg.RequeueInterval)
+	cred, err := api.Client(cfg.Controller.Host, cfg.Controller.Login, cfg.Controller.Password, cfg.RequeueInterval)
 	if err != nil {
 		log.Panicf("newHTTPCredentials error %v", err)
 	}

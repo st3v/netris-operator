@@ -47,7 +47,20 @@ func (r *VNetReconciler) VnetToVnetMeta(vnet *k8sv1alpha1.VNet) (*k8sv1alpha1.VN
 		siteNames = append(siteNames, site.Name)
 		ports = append(ports, site.SwitchPorts...)
 		for _, gateway := range site.Gateways {
-			apiGateways = append(apiGateways, makeGateway(gateway, dhcpOptionSetsByNames))
+			g, err := makeGateway(gateway, dhcpOptionSetsByNames)
+			if err != nil {
+				r.Log.Error(err, "failed to create gateway", "gateway", gateway)
+				// Todo:
+				// Adding an empty gateway is the original behavior from before
+				// refactoring `makeGateway` (i.e. have it return an error)
+				// Figure out if this is actually intended. It seems like we
+				// should rather return an error. In practice, we should
+				// never run into this case anyway since there is CIDR validation
+				// defined on the VNet CRD.
+				apiGateways = append(apiGateways, k8sv1alpha1.VNetMetaGateway{})
+			} else {
+				apiGateways = append(apiGateways, g)
+			}
 		}
 	}
 	prts, err := r.getPortsMeta(ports)

@@ -27,6 +27,7 @@ func TestMakeGateway(t *testing.T) {
 		gateway        k8sv1alpha1.VNetGateway
 		dhcpOptionSets map[string]*dhcp.DHCPOptionSet
 		expected       k8sv1alpha1.VNetMetaGateway
+		expectErr      bool
 	}{
 		{
 			name: "IPv4 gateway without DHCP",
@@ -111,12 +112,13 @@ func TestMakeGateway(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid CIDR returns empty gateway",
+			name: "invalid CIDR returns error",
 			gateway: k8sv1alpha1.VNetGateway{
 				Prefix: "not-a-valid-cidr",
 			},
 			dhcpOptionSets: nil,
 			expected:       k8sv1alpha1.VNetMetaGateway{},
+			expectErr:      true,
 		},
 		{
 			name: "different prefix lengths",
@@ -134,7 +136,18 @@ func TestMakeGateway(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := makeGateway(tt.gateway, tt.dhcpOptionSets)
+			result, err := makeGateway(tt.gateway, tt.dhcpOptionSets)
+			if tt.expectErr {
+				if err == nil {
+					t.Errorf("Expected error but got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Error: %v", err)
+				return
+			}
 
 			if result.Gateway != tt.expected.Gateway {
 				t.Errorf("Gateway: got %q, expected %q", result.Gateway, tt.expected.Gateway)
