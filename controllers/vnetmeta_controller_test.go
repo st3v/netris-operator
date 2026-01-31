@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
@@ -257,6 +258,61 @@ func TestVNetMetaReconciler_UpdateVNet(t *testing.T) {
 	}
 	if result.Requeue {
 		t.Errorf("expected no requeue, got Requeue=true")
+	}
+}
+
+func TestVNetMetaReconciler_updateVNet(t *testing.T) {
+	tests := []struct {
+		name        string
+		mockErr     error
+		wantErr     bool
+		errSubstr   string
+		wantRequeue bool
+	}{
+		{
+			name:        "success",
+			mockErr:     nil,
+			wantErr:     false,
+			wantRequeue: false,
+		},
+		{
+			name:        "client error",
+			mockErr:     errors.New("connection refused"),
+			wantErr:     true,
+			errSubstr:   "connection refused",
+			wantRequeue: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &VNetMetaReconciler{
+				VNetClient: &MockVNetClient{UpdateErr: tt.mockErr},
+			}
+
+			update := &vnet.VNetUpdate{
+				Name: "test-vnet",
+			}
+
+			result, err, _ := r.updateVNet(1, update)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("updateVNet() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errSubstr != "" {
+				if !containsSubstr(err.Error(), tt.errSubstr) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errSubstr)
+				}
+			}
+			if !tt.wantErr {
+				if result.Requeue != tt.wantRequeue {
+					t.Errorf("result.Requeue = %v, want %v", result.Requeue, tt.wantRequeue)
+				}
+				if result.RequeueAfter != 0 {
+					t.Errorf("result.RequeueAfter = %v, want 0", result.RequeueAfter)
+				}
+			}
+		})
 	}
 }
 

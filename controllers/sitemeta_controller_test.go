@@ -16,9 +16,11 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
+	"github.com/netrisai/netriswebapi/v2/types/site"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -266,5 +268,60 @@ func TestSiteMetaReconciler_DeletionWithID(t *testing.T) {
 
 	if len(updated.GetFinalizers()) != 0 {
 		t.Errorf("expected finalizers to be cleared, got %v", updated.GetFinalizers())
+	}
+}
+
+func TestSiteMetaReconciler_updateSite(t *testing.T) {
+	tests := []struct {
+		name        string
+		mockErr     error
+		wantErr     bool
+		errSubstr   string
+		wantRequeue bool
+	}{
+		{
+			name:        "success",
+			mockErr:     nil,
+			wantErr:     false,
+			wantRequeue: false,
+		},
+		{
+			name:        "client error",
+			mockErr:     errors.New("connection refused"),
+			wantErr:     true,
+			errSubstr:   "connection refused",
+			wantRequeue: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &SiteMetaReconciler{
+				SiteClient: &MockSiteClient{UpdateErr: tt.mockErr},
+			}
+
+			update := &site.Site{
+				Name: "test-site",
+			}
+
+			result, err, _ := r.updateSite(1, update)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("updateSite() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errSubstr != "" {
+				if !containsSubstr(err.Error(), tt.errSubstr) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errSubstr)
+				}
+			}
+			if !tt.wantErr {
+				if result.Requeue != tt.wantRequeue {
+					t.Errorf("result.Requeue = %v, want %v", result.Requeue, tt.wantRequeue)
+				}
+				if result.RequeueAfter != 0 {
+					t.Errorf("result.RequeueAfter = %v, want 0", result.RequeueAfter)
+				}
+			}
+		})
 	}
 }

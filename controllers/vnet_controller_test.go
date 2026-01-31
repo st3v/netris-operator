@@ -16,12 +16,14 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netriswebapi/v2/types/dhcp"
 	"github.com/netrisai/netriswebapi/v2/types/site"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -577,5 +579,121 @@ func TestVnetToVnetMeta_WithGateways(t *testing.T) {
 	}
 	if gw.DHCPOptionSetID != 42 {
 		t.Errorf("expected DHCPOptionSetID 42, got %d", gw.DHCPOptionSetID)
+	}
+}
+
+func TestVNetReconciler_deleteVNet(t *testing.T) {
+	tests := []struct {
+		name      string
+		vnetMeta  *k8sv1alpha1.VNetMeta
+		deleteErr error
+		wantErr   bool
+		errSubstr string
+	}{
+		{
+			name: "success - deletes via API and CRs",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vnet-meta-1",
+					Namespace: "default",
+				},
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					ID:      100,
+					Reclaim: false,
+				},
+			},
+			deleteErr: nil,
+			wantErr:   false,
+		},
+		{
+			name:      "nil meta - only deletes CR",
+			vnetMeta:  nil,
+			deleteErr: nil,
+			wantErr:   false,
+		},
+		{
+			name: "reclaim true - skips API call",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vnet-meta-reclaim",
+					Namespace: "default",
+				},
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					ID:      100,
+					Reclaim: true,
+				},
+			},
+			deleteErr: nil,
+			wantErr:   false,
+		},
+		{
+			name: "zero ID - skips API call",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vnet-meta-zero",
+					Namespace: "default",
+				},
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					ID:      0,
+					Reclaim: false,
+				},
+			},
+			deleteErr: nil,
+			wantErr:   false,
+		},
+		{
+			name: "API error",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vnet-meta-err",
+					Namespace: "default",
+				},
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					ID:      100,
+					Reclaim: false,
+				},
+			},
+			deleteErr: errors.New("connection refused"),
+			wantErr:   true,
+			errSubstr: "connection refused",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := newTestScheme()
+
+			vnet := &k8sv1alpha1.VNet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-vnet",
+					Namespace: "default",
+				},
+			}
+
+			objects := []runtime.Object{vnet}
+			if tt.vnetMeta != nil {
+				objects = append(objects, tt.vnetMeta)
+			}
+
+			fakeClient := fake.NewFakeClientWithScheme(scheme, objects...)
+
+			r := &VNetReconciler{
+				Client:     fakeClient,
+				Log:        newTestLogger(),
+				Scheme:     scheme,
+				VNetClient: &MockVNetClient{DeleteErr: tt.deleteErr},
+			}
+
+			_, err := r.deleteVNet(vnet, tt.vnetMeta)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("deleteVNet() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errSubstr != "" {
+				if !containsSubstr(err.Error(), tt.errSubstr) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errSubstr)
+				}
+			}
+		})
 	}
 }

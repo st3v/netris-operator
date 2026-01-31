@@ -15,6 +15,8 @@ limitations under the License.
 package controllers
 
 import (
+	"strings"
+
 	"github.com/go-logr/logr"
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
@@ -24,6 +26,11 @@ import (
 	"github.com/netrisai/netriswebapi/v2/types/vpc"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+// containsSubstr checks if s contains substr.
+func containsSubstr(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
 
 // testLogger is a no-op logger for testing.
 // logr v0.1.0 doesn't have Discard(), so we implement our own.
