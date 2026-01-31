@@ -290,3 +290,137 @@ func TestUnmarshalTimezone(t *testing.T) {
 		})
 	}
 }
+
+func TestInventoryProfileMetaToNetrisUpdate(t *testing.T) {
+	tests := []struct {
+		name            string
+		profileMeta     *k8sv1alpha1.InventoryProfileMeta
+		expectedName    string
+		expectedTimezone string
+		expectedDesc    string
+	}{
+		{
+			name: "basic conversion",
+			profileMeta: &k8sv1alpha1.InventoryProfileMeta{
+				Spec: k8sv1alpha1.InventoryProfileMetaSpec{
+					ID:                     1,
+					InventoryProfileName:   "test-profile",
+					Description:            "Test description",
+					Timezone:               "America/New_York",
+					AllowSSHFromIPv4:       []string{"10.0.0.0/8"},
+					DNSServers:             []string{"8.8.8.8"},
+				},
+			},
+			expectedName:     "test-profile",
+			expectedTimezone: "America/New_York",
+			expectedDesc:     "Test description",
+		},
+		{
+			name: "with custom rules",
+			profileMeta: &k8sv1alpha1.InventoryProfileMeta{
+				Spec: k8sv1alpha1.InventoryProfileMetaSpec{
+					InventoryProfileName: "profile-with-rules",
+					Timezone:             "UTC",
+					CustomRules: []k8sv1alpha1.InventoryProfileCustomRule{
+						{SrcSubnet: "192.168.0.0/24", SrcPort: "1024-65535", DstPort: "22", Protocol: "tcp"},
+					},
+				},
+			},
+			expectedName:     "profile-with-rules",
+			expectedTimezone: "UTC",
+			expectedDesc:     "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := InventoryProfileMetaToNetrisUpdate(tt.profileMeta)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Name != tt.expectedName {
+				t.Errorf("Name: got %q, expected %q", result.Name, tt.expectedName)
+			}
+			if result.Timezone.TzCode != tt.expectedTimezone {
+				t.Errorf("Timezone: got %q, expected %q", result.Timezone.TzCode, tt.expectedTimezone)
+			}
+			if result.Description != tt.expectedDesc {
+				t.Errorf("Description: got %q, expected %q", result.Description, tt.expectedDesc)
+			}
+		})
+	}
+}
+
+func TestCompareInventoryProfileMetaAPIEInventoryProfile(t *testing.T) {
+	tests := []struct {
+		name        string
+		profileMeta *k8sv1alpha1.InventoryProfileMeta
+		apiProfile  *inventoryprofile.Profile
+		expected    bool
+	}{
+		{
+			name: "all fields match",
+			profileMeta: &k8sv1alpha1.InventoryProfileMeta{
+				Spec: k8sv1alpha1.InventoryProfileMetaSpec{
+					InventoryProfileName: "test-profile",
+					Description:          "Test description",
+					Timezone:             "America/New_York",
+					AllowSSHFromIPv4:     []string{"10.0.0.0/8"},
+					AllowSSHFromIPv6:     []string{},
+					NTPServers:           []string{"pool.ntp.org"},
+					DNSServers:           []string{"8.8.8.8"},
+					CustomRules:          []k8sv1alpha1.InventoryProfileCustomRule{},
+				},
+			},
+			apiProfile: &inventoryprofile.Profile{
+				Name:        "test-profile",
+				Description: "Test description",
+				Timezone:    `{"label":"America/New_York","tzCode":"America/New_York"}`,
+				Ipv4SSH:     "10.0.0.0/8",
+				Ipv6SSH:     "",
+				NTPServers:  "pool.ntp.org",
+				DNSServers:  "8.8.8.8",
+				CustomRules: []inventoryprofile.CustomRule{},
+			},
+			expected: true,
+		},
+		{
+			name: "name mismatch",
+			profileMeta: &k8sv1alpha1.InventoryProfileMeta{
+				Spec: k8sv1alpha1.InventoryProfileMetaSpec{
+					InventoryProfileName: "profile-a",
+				},
+			},
+			apiProfile: &inventoryprofile.Profile{
+				Name: "profile-b",
+			},
+			expected: false,
+		},
+		{
+			name: "description mismatch",
+			profileMeta: &k8sv1alpha1.InventoryProfileMeta{
+				Spec: k8sv1alpha1.InventoryProfileMetaSpec{
+					InventoryProfileName: "test-profile",
+					Description:          "Description A",
+				},
+			},
+			apiProfile: &inventoryprofile.Profile{
+				Name:        "test-profile",
+				Description: "Description B",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := uniReconciler{
+				DebugLogger: newTestLogger(),
+			}
+			result := compareInventoryProfileMetaAPIEInventoryProfile(tt.profileMeta, tt.apiProfile, u)
+			if result != tt.expected {
+				t.Errorf("got %v, expected %v", result, tt.expected)
+			}
+		})
+	}
+}

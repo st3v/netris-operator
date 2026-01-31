@@ -328,3 +328,169 @@ func TestCompareL4LBMetaAPIL4LBHealthCheck(t *testing.T) {
 		})
 	}
 }
+
+func TestL4LBMetaToNetris(t *testing.T) {
+	tests := []struct {
+		name           string
+		l4lbMeta       *k8sv1alpha1.L4LBMeta
+		expectedName   string
+		expectedPort   int
+		expectedProto  string
+		expectedAuto   bool
+	}{
+		{
+			name: "basic TCP load balancer",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "test-lb",
+					Protocol:    "TCP",
+					Port:        80,
+					Tenant:      1,
+					SiteID:      1,
+					SiteName:    "site-1",
+					Automatic:   true,
+					Status:      "enabled",
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+					Backend: []k8sv1alpha1.L4LBMetaBackend{
+						{IP: "10.0.0.1", Port: 8080},
+						{IP: "10.0.0.2", Port: 8080},
+					},
+				},
+			},
+			expectedName:  "test-lb",
+			expectedPort:  80,
+			expectedProto: "TCP",
+			expectedAuto:  true,
+		},
+		{
+			name: "UDP load balancer with explicit IP",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "udp-lb",
+					Protocol:    "UDP",
+					Port:        53,
+					IP:          "203.0.113.1",
+					Automatic:   false,
+					Tenant:      2,
+					SiteID:      1,
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+					Backend: []k8sv1alpha1.L4LBMetaBackend{
+						{IP: "10.0.0.10", Port: 53},
+					},
+				},
+			},
+			expectedName:  "udp-lb",
+			expectedPort:  53,
+			expectedProto: "UDP",
+			expectedAuto:  false,
+		},
+		{
+			name: "load balancer with HTTP health check",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName: "http-health-lb",
+					Protocol: "TCP",
+					Port:     443,
+					Tenant:   1,
+					SiteID:   1,
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{
+						HTTP: &k8sv1alpha1.L4LBMetaHealthCheckHTTP{
+							RequestPath: "/health",
+							Timeout:     "5000",
+						},
+					},
+				},
+			},
+			expectedName:  "http-health-lb",
+			expectedPort:  443,
+			expectedProto: "TCP",
+			expectedAuto:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := L4LBMetaToNetris(tt.l4lbMeta)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Name != tt.expectedName {
+				t.Errorf("Name: got %q, expected %q", result.Name, tt.expectedName)
+			}
+			if result.Port != tt.expectedPort {
+				t.Errorf("Port: got %d, expected %d", result.Port, tt.expectedPort)
+			}
+			if result.Protocol != tt.expectedProto {
+				t.Errorf("Protocol: got %q, expected %q", result.Protocol, tt.expectedProto)
+			}
+			if result.Automatic != tt.expectedAuto {
+				t.Errorf("Automatic: got %v, expected %v", result.Automatic, tt.expectedAuto)
+			}
+		})
+	}
+}
+
+func TestL4LBMetaToNetrisUpdate(t *testing.T) {
+	tests := []struct {
+		name          string
+		l4lbMeta      *k8sv1alpha1.L4LBMeta
+		expectedName  string
+		expectedPort  int
+		expectedProto string
+	}{
+		{
+			name: "basic update",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "update-lb",
+					Protocol:    "TCP",
+					Port:        8080,
+					Tenant:      1,
+					SiteID:      1,
+					Status:      "enabled",
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+				},
+			},
+			expectedName:  "update-lb",
+			expectedPort:  8080,
+			expectedProto: "TCP",
+		},
+		{
+			name: "update with TCP health check",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName: "tcp-health-lb",
+					Protocol: "TCP",
+					Port:     443,
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{
+						TCP: &k8sv1alpha1.L4LBMetaHealthCheckTCP{
+							RequestPath: "/",
+							Timeout:     "3000",
+						},
+					},
+				},
+			},
+			expectedName:  "tcp-health-lb",
+			expectedPort:  443,
+			expectedProto: "TCP",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := L4LBMetaToNetrisUpdate(tt.l4lbMeta)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Name != tt.expectedName {
+				t.Errorf("Name: got %q, expected %q", result.Name, tt.expectedName)
+			}
+			if result.Port != tt.expectedPort {
+				t.Errorf("Port: got %d, expected %d", result.Port, tt.expectedPort)
+			}
+			if result.Protocol != tt.expectedProto {
+				t.Errorf("Protocol: got %q, expected %q", result.Protocol, tt.expectedProto)
+			}
+		})
+	}
+}

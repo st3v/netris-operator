@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
+	"github.com/netrisai/netriswebapi/v2/types/ipam"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -228,6 +229,125 @@ func TestAllocationUpdateDefaultAnnotations(t *testing.T) {
 			if allocation.GetAnnotations()["resource.k8s.netris.ai/reclaimPolicy"] != tt.expectedReclaimPolicy {
 				t.Errorf("reclaimPolicy: got %q, expected %q",
 					allocation.GetAnnotations()["resource.k8s.netris.ai/reclaimPolicy"], tt.expectedReclaimPolicy)
+			}
+		})
+	}
+}
+
+func TestAllocationMetaToNetrisUpdate(t *testing.T) {
+	tests := []struct {
+		name           string
+		allocationMeta *k8sv1alpha1.AllocationMeta
+		expectedName   string
+		expectedPrefix string
+		expectedTenant string
+	}{
+		{
+			name: "basic conversion",
+			allocationMeta: &k8sv1alpha1.AllocationMeta{
+				Spec: k8sv1alpha1.AllocationMetaSpec{
+					AllocationName: "test-allocation",
+					Prefix:         "10.0.0.0/24",
+					Tenant:         "default",
+				},
+			},
+			expectedName:   "test-allocation",
+			expectedPrefix: "10.0.0.0/24",
+			expectedTenant: "default",
+		},
+		{
+			name: "different values",
+			allocationMeta: &k8sv1alpha1.AllocationMeta{
+				Spec: k8sv1alpha1.AllocationMetaSpec{
+					AllocationName: "prod-allocation",
+					Prefix:         "192.168.0.0/16",
+					Tenant:         "production",
+				},
+			},
+			expectedName:   "prod-allocation",
+			expectedPrefix: "192.168.0.0/16",
+			expectedTenant: "production",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := AllocationMetaToNetrisUpdate(tt.allocationMeta)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Name != tt.expectedName {
+				t.Errorf("Name: got %q, expected %q", result.Name, tt.expectedName)
+			}
+			if result.Prefix != tt.expectedPrefix {
+				t.Errorf("Prefix: got %q, expected %q", result.Prefix, tt.expectedPrefix)
+			}
+			if result.Tenant.Name != tt.expectedTenant {
+				t.Errorf("Tenant: got %q, expected %q", result.Tenant.Name, tt.expectedTenant)
+			}
+		})
+	}
+}
+
+func TestCompareAllocationMetaAPIEAllocation(t *testing.T) {
+	tests := []struct {
+		name           string
+		allocationMeta *k8sv1alpha1.AllocationMeta
+		apiAllocation  *ipam.IPAM
+		expected       bool
+	}{
+		{
+			name: "all fields match",
+			allocationMeta: &k8sv1alpha1.AllocationMeta{
+				Spec: k8sv1alpha1.AllocationMetaSpec{
+					AllocationName: "test-allocation",
+					Prefix:         "10.0.0.0/24",
+				},
+			},
+			apiAllocation: &ipam.IPAM{
+				Name:   "test-allocation",
+				Prefix: "10.0.0.0/24",
+			},
+			expected: true,
+		},
+		{
+			name: "name mismatch",
+			allocationMeta: &k8sv1alpha1.AllocationMeta{
+				Spec: k8sv1alpha1.AllocationMetaSpec{
+					AllocationName: "allocation-a",
+					Prefix:         "10.0.0.0/24",
+				},
+			},
+			apiAllocation: &ipam.IPAM{
+				Name:   "allocation-b",
+				Prefix: "10.0.0.0/24",
+			},
+			expected: false,
+		},
+		{
+			name: "prefix mismatch",
+			allocationMeta: &k8sv1alpha1.AllocationMeta{
+				Spec: k8sv1alpha1.AllocationMetaSpec{
+					AllocationName: "test-allocation",
+					Prefix:         "10.0.0.0/24",
+				},
+			},
+			apiAllocation: &ipam.IPAM{
+				Name:   "test-allocation",
+				Prefix: "192.168.0.0/16",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := uniReconciler{
+				DebugLogger: newTestLogger(),
+			}
+			result := compareAllocationMetaAPIEAllocation(tt.allocationMeta, tt.apiAllocation, u)
+			if result != tt.expected {
+				t.Errorf("got %v, expected %v", result, tt.expected)
 			}
 		})
 	}

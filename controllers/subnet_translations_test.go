@@ -253,3 +253,159 @@ func TestCompareSubnetMetaSiteAPISubnetSite(t *testing.T) {
 		})
 	}
 }
+
+func TestSubnetMetaToNetrisUpdate(t *testing.T) {
+	tests := []struct {
+		name             string
+		subnetMeta       *k8sv1alpha1.SubnetMeta
+		expectedName     string
+		expectedPrefix   string
+		expectedPurpose  string
+		expectedTenantID int
+		expectedSites    []int
+	}{
+		{
+			name: "basic conversion",
+			subnetMeta: &k8sv1alpha1.SubnetMeta{
+				Spec: k8sv1alpha1.SubnetMetaSpec{
+					SubnetName:     "test-subnet",
+					Prefix:         "10.0.0.0/24",
+					TenantID:       1,
+					Purpose:        "common",
+					DefaultGateway: "10.0.0.1",
+					Sites:          []int{1, 2},
+				},
+			},
+			expectedName:     "test-subnet",
+			expectedPrefix:   "10.0.0.0/24",
+			expectedPurpose:  "common",
+			expectedTenantID: 1,
+			expectedSites:    []int{1, 2},
+		},
+		{
+			name: "load-balancer purpose",
+			subnetMeta: &k8sv1alpha1.SubnetMeta{
+				Spec: k8sv1alpha1.SubnetMetaSpec{
+					SubnetName: "lb-subnet",
+					Prefix:     "192.168.0.0/24",
+					TenantID:   5,
+					Purpose:    "load-balancer",
+					Sites:      []int{3},
+				},
+			},
+			expectedName:     "lb-subnet",
+			expectedPrefix:   "192.168.0.0/24",
+			expectedPurpose:  "load-balancer",
+			expectedTenantID: 5,
+			expectedSites:    []int{3},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := SubnetMetaToNetrisUpdate(tt.subnetMeta)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Name != tt.expectedName {
+				t.Errorf("Name: got %q, expected %q", result.Name, tt.expectedName)
+			}
+			if result.Prefix != tt.expectedPrefix {
+				t.Errorf("Prefix: got %q, expected %q", result.Prefix, tt.expectedPrefix)
+			}
+			if result.Purpose != tt.expectedPurpose {
+				t.Errorf("Purpose: got %q, expected %q", result.Purpose, tt.expectedPurpose)
+			}
+			if result.Tenant.ID != tt.expectedTenantID {
+				t.Errorf("TenantID: got %d, expected %d", result.Tenant.ID, tt.expectedTenantID)
+			}
+			if len(result.Sites) != len(tt.expectedSites) {
+				t.Errorf("Sites count: got %d, expected %d", len(result.Sites), len(tt.expectedSites))
+			}
+		})
+	}
+}
+
+func TestCompareSubnetMetaAPIESubnet(t *testing.T) {
+	tests := []struct {
+		name       string
+		subnetMeta *k8sv1alpha1.SubnetMeta
+		apiSubnet  *ipam.IPAM
+		expected   bool
+	}{
+		{
+			name: "all fields match",
+			subnetMeta: &k8sv1alpha1.SubnetMeta{
+				Spec: k8sv1alpha1.SubnetMetaSpec{
+					SubnetName:     "test-subnet",
+					Prefix:         "10.0.0.0/24",
+					Purpose:        "common",
+					DefaultGateway: "10.0.0.1",
+					Sites:          []int{1, 2},
+				},
+			},
+			apiSubnet: &ipam.IPAM{
+				Name:           "test-subnet",
+				Prefix:         "10.0.0.0/24",
+				Purpose:        "common",
+				DefaultGateway: "10.0.0.1",
+				Sites:          []ipam.IDName{{ID: 1}, {ID: 2}},
+			},
+			expected: true,
+		},
+		{
+			name: "name mismatch",
+			subnetMeta: &k8sv1alpha1.SubnetMeta{
+				Spec: k8sv1alpha1.SubnetMetaSpec{
+					SubnetName: "subnet-a",
+				},
+			},
+			apiSubnet: &ipam.IPAM{
+				Name: "subnet-b",
+			},
+			expected: false,
+		},
+		{
+			name: "prefix mismatch",
+			subnetMeta: &k8sv1alpha1.SubnetMeta{
+				Spec: k8sv1alpha1.SubnetMetaSpec{
+					SubnetName: "test-subnet",
+					Prefix:     "10.0.0.0/24",
+				},
+			},
+			apiSubnet: &ipam.IPAM{
+				Name:   "test-subnet",
+				Prefix: "192.168.0.0/16",
+			},
+			expected: false,
+		},
+		{
+			name: "purpose mismatch",
+			subnetMeta: &k8sv1alpha1.SubnetMeta{
+				Spec: k8sv1alpha1.SubnetMetaSpec{
+					SubnetName: "test-subnet",
+					Prefix:     "10.0.0.0/24",
+					Purpose:    "common",
+				},
+			},
+			apiSubnet: &ipam.IPAM{
+				Name:    "test-subnet",
+				Prefix:  "10.0.0.0/24",
+				Purpose: "load-balancer",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := uniReconciler{
+				DebugLogger: newTestLogger(),
+			}
+			result := compareSubnetMetaAPIESubnet(tt.subnetMeta, tt.apiSubnet, u)
+			if result != tt.expected {
+				t.Errorf("got %v, expected %v", result, tt.expected)
+			}
+		})
+	}
+}

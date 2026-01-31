@@ -322,3 +322,63 @@ func TestOptionalRouteMapID(t *testing.T) {
 		})
 	}
 }
+
+func TestBGPMetaToNetrisUpdate(t *testing.T) {
+	tests := []struct {
+		name         string
+		bgpMeta      *k8sv1alpha1.BGPMeta
+		expectedName string
+		expectedSite string
+		expectedIP   string
+	}{
+		{
+			name: "basic conversion",
+			bgpMeta: &k8sv1alpha1.BGPMeta{
+				Spec: k8sv1alpha1.BGPMetaSpec{
+					BGPName:   "test-bgp",
+					Site:      "site-1",
+					LocalIP:   "10.0.0.1",
+					RemoteIP:  "10.0.0.2",
+					NeighborAs: 65000,
+					Status:    "enabled",
+				},
+			},
+			expectedName: "test-bgp",
+			expectedSite: "site-1",
+			expectedIP:   "10.0.0.1",
+		},
+		{
+			name: "with vnet",
+			bgpMeta: &k8sv1alpha1.BGPMeta{
+				Spec: k8sv1alpha1.BGPMetaSpec{
+					BGPName:   "bgp-with-vnet",
+					Site:      "site-2",
+					VnetID:    100,
+					LocalIP:   "192.168.1.1",
+					NeighborAs: 65001,
+				},
+			},
+			expectedName: "bgp-with-vnet",
+			expectedSite: "site-2",
+			expectedIP:   "192.168.1.1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := BGPMetaToNetrisUpdate(tt.bgpMeta)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Name != tt.expectedName {
+				t.Errorf("Name: got %q, expected %q", result.Name, tt.expectedName)
+			}
+			if result.Site.Name != tt.expectedSite {
+				t.Errorf("Site: got %q, expected %q", result.Site.Name, tt.expectedSite)
+			}
+			if result.LocalIP != tt.expectedIP {
+				t.Errorf("LocalIP: got %q, expected %q", result.LocalIP, tt.expectedIP)
+			}
+		})
+	}
+}

@@ -21,6 +21,53 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func TestLinkMetaToNetrisUpdate(t *testing.T) {
+	tests := []struct {
+		name           string
+		linkMeta       *k8sv1alpha1.LinkMeta
+		expectedLocal  int
+		expectedRemote int
+	}{
+		{
+			name: "basic conversion",
+			linkMeta: &k8sv1alpha1.LinkMeta{
+				Spec: k8sv1alpha1.LinkMetaSpec{
+					Local:  100,
+					Remote: 200,
+				},
+			},
+			expectedLocal:  100,
+			expectedRemote: 200,
+		},
+		{
+			name: "different ports",
+			linkMeta: &k8sv1alpha1.LinkMeta{
+				Spec: k8sv1alpha1.LinkMetaSpec{
+					Local:  50,
+					Remote: 75,
+				},
+			},
+			expectedLocal:  50,
+			expectedRemote: 75,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := LinkMetaToNetrisUpdate(tt.linkMeta)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Local.ID != tt.expectedLocal {
+				t.Errorf("Local: got %d, expected %d", result.Local.ID, tt.expectedLocal)
+			}
+			if result.Remote.ID != tt.expectedRemote {
+				t.Errorf("Remote: got %d, expected %d", result.Remote.ID, tt.expectedRemote)
+			}
+		})
+	}
+}
+
 func TestLinkCompareFieldsForNewMeta(t *testing.T) {
 	tests := []struct {
 		name     string
