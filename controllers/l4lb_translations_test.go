@@ -15,12 +15,16 @@ limitations under the License.
 package controllers
 
 import (
+	"errors"
 	"testing"
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
+	"github.com/netrisai/netriswebapi/v2/types/ipam"
 	"github.com/netrisai/netriswebapi/v2/types/l4lb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+var errMock = errors.New("mock error")
 
 func TestL4lbCompareFieldsForNewMeta(t *testing.T) {
 	tests := []struct {
@@ -490,6 +494,375 @@ func TestL4LBMetaToNetrisUpdate(t *testing.T) {
 			}
 			if result.Protocol != tt.expectedProto {
 				t.Errorf("Protocol: got %q, expected %q", result.Protocol, tt.expectedProto)
+			}
+		})
+	}
+}
+
+func TestCompareL4LBMetaAPIL4LB(t *testing.T) {
+	tests := []struct {
+		name      string
+		l4lbMeta  *k8sv1alpha1.L4LBMeta
+		apiL4LB   *l4lb.LoadBalancer
+		wantMatch bool
+	}{
+		{
+			name: "all fields match",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:  "test-lb",
+					IP:        "10.0.0.1",
+					Automatic: false,
+					Port:      80,
+					Protocol:  "TCP",
+					SiteID:    1,
+					Tenant:    2,
+					Status:    "enabled",
+					VPCID:     3,
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{
+						TCP: &k8sv1alpha1.L4LBMetaHealthCheckTCP{
+							RequestPath: "/health",
+							Timeout:     "3000",
+						},
+					},
+					Backend: []k8sv1alpha1.L4LBMetaBackend{
+						{IP: "192.168.1.1", Port: 8080},
+					},
+				},
+			},
+			apiL4LB: &l4lb.LoadBalancer{
+				Name:      "test-lb",
+				IP:        "10.0.0.1",
+				Automatic: false,
+				Port:      80,
+				Protocol:  "TCP",
+				Site:      l4lb.IDName{ID: 1},
+				Tenant:    l4lb.IDName{ID: 2},
+				Status:    "enabled",
+				Vpc:       l4lb.IDName{ID: 3},
+				HealthCheck: l4lb.LBHealthCheck{
+					TCP: l4lb.LBHealthCheckTCP{
+						RequestPath: "/health",
+						Timeout:     "3000",
+					},
+				},
+				BackendIPs: []l4lb.LBBackend{
+					{IP: "192.168.1.1", Port: "8080"},
+				},
+			},
+			wantMatch: true,
+		},
+		{
+			name: "name mismatch",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "lb-a",
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+				},
+			},
+			apiL4LB: &l4lb.LoadBalancer{
+				Name: "lb-b",
+			},
+			wantMatch: false,
+		},
+		{
+			name: "IP mismatch",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "test-lb",
+					IP:          "10.0.0.1",
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+				},
+			},
+			apiL4LB: &l4lb.LoadBalancer{
+				Name: "test-lb",
+				IP:   "10.0.0.2",
+			},
+			wantMatch: false,
+		},
+		{
+			name: "automatic mismatch",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "test-lb",
+					Automatic:   true,
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+				},
+			},
+			apiL4LB: &l4lb.LoadBalancer{
+				Name:      "test-lb",
+				Automatic: false,
+			},
+			wantMatch: false,
+		},
+		{
+			name: "port mismatch",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "test-lb",
+					Port:        80,
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+				},
+			},
+			apiL4LB: &l4lb.LoadBalancer{
+				Name: "test-lb",
+				Port: 443,
+			},
+			wantMatch: false,
+		},
+		{
+			name: "protocol mismatch",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "test-lb",
+					Protocol:    "TCP",
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+				},
+			},
+			apiL4LB: &l4lb.LoadBalancer{
+				Name:     "test-lb",
+				Protocol: "UDP",
+			},
+			wantMatch: false,
+		},
+		{
+			name: "site mismatch",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "test-lb",
+					SiteID:      1,
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+				},
+			},
+			apiL4LB: &l4lb.LoadBalancer{
+				Name: "test-lb",
+				Site: l4lb.IDName{ID: 2},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "tenant mismatch",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "test-lb",
+					Tenant:      1,
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+				},
+			},
+			apiL4LB: &l4lb.LoadBalancer{
+				Name:   "test-lb",
+				Tenant: l4lb.IDName{ID: 2},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "status mismatch",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "test-lb",
+					Status:      "enabled",
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+				},
+			},
+			apiL4LB: &l4lb.LoadBalancer{
+				Name:   "test-lb",
+				Status: "disabled",
+			},
+			wantMatch: false,
+		},
+		{
+			name: "VPC mismatch",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "test-lb",
+					VPCID:       1,
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+				},
+			},
+			apiL4LB: &l4lb.LoadBalancer{
+				Name: "test-lb",
+				Vpc:  l4lb.IDName{ID: 2},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "health check mismatch",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName: "test-lb",
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{
+						TCP: &k8sv1alpha1.L4LBMetaHealthCheckTCP{
+							RequestPath: "/health",
+							Timeout:     "3000",
+						},
+					},
+				},
+			},
+			apiL4LB: &l4lb.LoadBalancer{
+				Name: "test-lb",
+				HealthCheck: l4lb.LBHealthCheck{
+					TCP: l4lb.LBHealthCheckTCP{
+						RequestPath: "/different",
+						Timeout:     "3000",
+					},
+				},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "backend mismatch",
+			l4lbMeta: &k8sv1alpha1.L4LBMeta{
+				Spec: k8sv1alpha1.L4LBMetaSpec{
+					L4LBName:    "test-lb",
+					HealthCheck: &k8sv1alpha1.L4LBMetaHealthCheck{},
+					Backend: []k8sv1alpha1.L4LBMetaBackend{
+						{IP: "192.168.1.1", Port: 8080},
+					},
+				},
+			},
+			apiL4LB: &l4lb.LoadBalancer{
+				Name: "test-lb",
+				BackendIPs: []l4lb.LBBackend{
+					{IP: "192.168.1.2", Port: "8080"},
+				},
+			},
+			wantMatch: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := compareL4LBMetaAPIL4LB(tt.l4lbMeta, tt.apiL4LB)
+			if got != tt.wantMatch {
+				t.Errorf("got %v, want %v", got, tt.wantMatch)
+			}
+		})
+	}
+}
+
+func TestFindSiteByIP(t *testing.T) {
+	tests := []struct {
+		name       string
+		ip         string
+		ipamData   []*ipam.IPAM
+		ipamErr    error
+		wantSiteID int
+		wantErr    bool
+	}{
+		{
+			name: "finds site for IP in subnet",
+			ip:   "10.0.1.50",
+			ipamData: []*ipam.IPAM{
+				{
+					Prefix: "10.0.0.0/16",
+					Children: []*ipam.IPAM{
+						{
+							Prefix: "10.0.1.0/24",
+							Sites:  []ipam.IDName{{ID: 42, Name: "site-1"}},
+						},
+					},
+				},
+			},
+			wantSiteID: 42,
+			wantErr:    false,
+		},
+		{
+			name: "IP not in any subnet",
+			ip:   "192.168.1.1",
+			ipamData: []*ipam.IPAM{
+				{
+					Prefix: "10.0.0.0/16",
+					Children: []*ipam.IPAM{
+						{
+							Prefix: "10.0.1.0/24",
+							Sites:  []ipam.IDName{{ID: 42, Name: "site-1"}},
+						},
+					},
+				},
+			},
+			wantSiteID: 0,
+			wantErr:    true,
+		},
+		{
+			name: "subnet has no sites",
+			ip:   "10.0.1.50",
+			ipamData: []*ipam.IPAM{
+				{
+					Prefix: "10.0.0.0/16",
+					Children: []*ipam.IPAM{
+						{
+							Prefix: "10.0.1.0/24",
+							Sites:  []ipam.IDName{},
+						},
+					},
+				},
+			},
+			wantSiteID: 0,
+			wantErr:    true,
+		},
+		{
+			name: "multiple subnets finds correct one",
+			ip:   "10.0.2.100",
+			ipamData: []*ipam.IPAM{
+				{
+					Prefix: "10.0.0.0/16",
+					Children: []*ipam.IPAM{
+						{
+							Prefix: "10.0.1.0/24",
+							Sites:  []ipam.IDName{{ID: 1, Name: "site-1"}},
+						},
+						{
+							Prefix: "10.0.2.0/24",
+							Sites:  []ipam.IDName{{ID: 2, Name: "site-2"}},
+						},
+					},
+				},
+			},
+			wantSiteID: 2,
+			wantErr:    false,
+		},
+		{
+			name:       "IPAM client error",
+			ip:         "10.0.1.50",
+			ipamData:   nil,
+			ipamErr:    errMock,
+			wantSiteID: 0,
+			wantErr:    true,
+		},
+		{
+			name: "invalid CIDR in subnet",
+			ip:   "10.0.1.50",
+			ipamData: []*ipam.IPAM{
+				{
+					Prefix: "10.0.0.0/16",
+					Children: []*ipam.IPAM{
+						{
+							Prefix: "invalid-cidr",
+							Sites:  []ipam.IDName{{ID: 42, Name: "site-1"}},
+						},
+					},
+				},
+			},
+			wantSiteID: 0,
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &L4LBReconciler{
+				IPAMClient: &MockIPAMClient{
+					Data:   tt.ipamData,
+					GetErr: tt.ipamErr,
+				},
+			}
+
+			siteID, err := r.findSiteByIP(tt.ip)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if siteID != tt.wantSiteID {
+				t.Errorf("siteID = %d, want %d", siteID, tt.wantSiteID)
 			}
 		})
 	}

@@ -21,6 +21,7 @@ import (
 	"github.com/netrisai/netriswebapi/v2/types/inventory"
 	"github.com/netrisai/netriswebapi/v2/types/ipam"
 	"github.com/netrisai/netriswebapi/v2/types/site"
+	"github.com/netrisai/netriswebapi/v2/types/vpc"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -102,6 +103,26 @@ func newTestStorageWithSubnets(subnets []*ipam.IPAM) *netrisstorage.Storage {
 		SubnetsStorage:          subnetsStorage,
 		HWsStorage:              netrisstorage.NewHWsStorage(),
 		VPCStorage:              netrisstorage.NewVPCStorage(),
+		VNetStorage:             netrisstorage.NewVNetStorage(),
+		BGPStorage:              netrisstorage.NewBGPStorage(),
+		L4LBStorage:             netrisstorage.NewL4LBStorage(),
+		LinksStorage:            netrisstorage.NewLinksStorage(),
+		NATStorage:              netrisstorage.NewNATStorage(),
+		InventoryProfileStorage: netrisstorage.NewInventoryProfileStorage(),
+	}
+}
+
+// newTestStorageWithVPCs creates a Storage with pre-populated VPCs for testing.
+func newTestStorageWithVPCs(vpcs []*vpc.VPC) *netrisstorage.Storage {
+	vpcStorage := netrisstorage.NewVPCStorage()
+	vpcStorage.VPCs = vpcs
+	return &netrisstorage.Storage{
+		SitesStorage:            netrisstorage.NewSitesStorage(),
+		PortsStorage:            netrisstorage.NewPortStorage(),
+		TenantsStorage:          netrisstorage.NewTenantsStorage(),
+		SubnetsStorage:          netrisstorage.NewSubnetsStorage(),
+		HWsStorage:              netrisstorage.NewHWsStorage(),
+		VPCStorage:              vpcStorage,
 		VNetStorage:             netrisstorage.NewVNetStorage(),
 		BGPStorage:              netrisstorage.NewBGPStorage(),
 		L4LBStorage:             netrisstorage.NewL4LBStorage(),

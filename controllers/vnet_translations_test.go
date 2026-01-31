@@ -928,3 +928,159 @@ func TestVnetCompareFieldsForNewMeta(t *testing.T) {
 		})
 	}
 }
+
+func TestVnetMetaToNetrisUpdate(t *testing.T) {
+	tests := []struct {
+		name             string
+		vnetMeta         *k8sv1alpha1.VNetMeta
+		expectedName     string
+		expectedState    string
+		expectedSites    int
+		expectedGateways int
+		expectedPorts    int
+	}{
+		{
+			name: "basic vnet update",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "test-vnet",
+					State:    "active",
+					VlanID:   "100",
+					Sites: []k8sv1alpha1.VNetMetaSite{
+						{Name: "site-1"},
+					},
+				},
+			},
+			expectedName:     "test-vnet",
+			expectedState:    "active",
+			expectedSites:    1,
+			expectedGateways: 0,
+			expectedPorts:    0,
+		},
+		{
+			name: "vnet with gateways",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "gateway-vnet",
+					State:    "active",
+					VlanID:   "200",
+					Sites: []k8sv1alpha1.VNetMetaSite{
+						{Name: "site-1"},
+					},
+					Gateways: []k8sv1alpha1.VNetMetaGateway{
+						{Gateway: "10.0.0.1", GwLength: 24, DHCP: false},
+						{Gateway: "10.0.1.1", GwLength: 24, DHCP: true, DHCPStartIP: "10.0.1.10", DHCPEndIP: "10.0.1.100"},
+					},
+				},
+			},
+			expectedName:     "gateway-vnet",
+			expectedState:    "active",
+			expectedSites:    1,
+			expectedGateways: 2,
+			expectedPorts:    0,
+		},
+		{
+			name: "vnet with ports",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "port-vnet",
+					State:    "active",
+					VlanID:   "300",
+					Sites: []k8sv1alpha1.VNetMetaSite{
+						{Name: "site-1"},
+					},
+					Members: []k8sv1alpha1.VNetMetaMember{
+						{Name: "port-1", Vlan: "300", Untagged: "no", ID: 1},
+						{Name: "port-2", Vlan: "300", Untagged: "yes", ID: 2},
+					},
+				},
+			},
+			expectedName:     "port-vnet",
+			expectedState:    "active",
+			expectedSites:    1,
+			expectedGateways: 0,
+			expectedPorts:    2,
+		},
+		{
+			name: "vnet with guest tenants",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "multi-tenant-vnet",
+					State:    "active",
+					VlanID:   "400",
+					Sites: []k8sv1alpha1.VNetMetaSite{
+						{Name: "site-1"},
+					},
+					Tenants: []string{"tenant-a", "tenant-b"},
+				},
+			},
+			expectedName:     "multi-tenant-vnet",
+			expectedState:    "active",
+			expectedSites:    1,
+			expectedGateways: 0,
+			expectedPorts:    0,
+		},
+		{
+			name: "vnet with multiple sites",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "multi-site-vnet",
+					State:    "active",
+					VlanID:   "500",
+					Sites: []k8sv1alpha1.VNetMetaSite{
+						{Name: "site-1"},
+						{Name: "site-2"},
+						{Name: "site-3"},
+					},
+				},
+			},
+			expectedName:     "multi-site-vnet",
+			expectedState:    "active",
+			expectedSites:    3,
+			expectedGateways: 0,
+			expectedPorts:    0,
+		},
+		{
+			name: "vnet with auto vlan",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "auto-vlan-vnet",
+					State:    "active",
+					VlanID:   "auto",
+					Sites: []k8sv1alpha1.VNetMetaSite{
+						{Name: "site-1"},
+					},
+				},
+			},
+			expectedName:     "auto-vlan-vnet",
+			expectedState:    "active",
+			expectedSites:    1,
+			expectedGateways: 0,
+			expectedPorts:    0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := VnetMetaToNetrisUpdate(tt.vnetMeta)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Name != tt.expectedName {
+				t.Errorf("Name: got %q, expected %q", result.Name, tt.expectedName)
+			}
+			if result.State != tt.expectedState {
+				t.Errorf("State: got %q, expected %q", result.State, tt.expectedState)
+			}
+			if len(result.Sites) != tt.expectedSites {
+				t.Errorf("Sites count: got %d, expected %d", len(result.Sites), tt.expectedSites)
+			}
+			if len(result.Gateways) != tt.expectedGateways {
+				t.Errorf("Gateways count: got %d, expected %d", len(result.Gateways), tt.expectedGateways)
+			}
+			if len(result.Ports) != tt.expectedPorts {
+				t.Errorf("Ports count: got %d, expected %d", len(result.Ports), tt.expectedPorts)
+			}
+		})
+	}
+}
