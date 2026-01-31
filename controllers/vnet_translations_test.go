@@ -359,6 +359,483 @@ func TestVnetUpdateDefaultAnnotations(t *testing.T) {
 	}
 }
 
+func TestCompareVNetMetaAPIVnetGateways(t *testing.T) {
+	tests := []struct {
+		name        string
+		k8sGateways []k8sv1alpha1.VNetMetaGateway
+		apiGateways []vnet.VNetDetailedGateway
+		wantMatch   bool
+	}{
+		{
+			name:        "both empty",
+			k8sGateways: []k8sv1alpha1.VNetMetaGateway{},
+			apiGateways: []vnet.VNetDetailedGateway{},
+			wantMatch:   true,
+		},
+		{
+			name: "matching gateways without DHCP",
+			k8sGateways: []k8sv1alpha1.VNetMetaGateway{
+				{Gateway: "192.168.1.1", GwLength: 24},
+			},
+			apiGateways: []vnet.VNetDetailedGateway{
+				{Prefix: "192.168.1.1/24"},
+			},
+			wantMatch: true,
+		},
+		{
+			name: "matching gateways with DHCP",
+			k8sGateways: []k8sv1alpha1.VNetMetaGateway{
+				{
+					Gateway:         "192.168.1.1",
+					GwLength:        24,
+					DHCP:            true,
+					DHCPOptionSetID: 1,
+					DHCPStartIP:     "192.168.1.100",
+					DHCPEndIP:       "192.168.1.200",
+				},
+			},
+			apiGateways: []vnet.VNetDetailedGateway{
+				{
+					Prefix:      "192.168.1.1/24",
+					DHCPEnabled: true,
+					DHCP: &vnet.VNetGatewayDHCP{
+						OptionSet: vnet.IDName{ID: 1},
+						Start:     "192.168.1.100",
+						End:       "192.168.1.200",
+					},
+				},
+			},
+			wantMatch: true,
+		},
+		{
+			name: "prefix mismatch",
+			k8sGateways: []k8sv1alpha1.VNetMetaGateway{
+				{Gateway: "192.168.1.1", GwLength: 24},
+			},
+			apiGateways: []vnet.VNetDetailedGateway{
+				{Prefix: "10.0.0.1/24"},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "DHCP mismatch - k8s has DHCP api does not",
+			k8sGateways: []k8sv1alpha1.VNetMetaGateway{
+				{
+					Gateway:  "192.168.1.1",
+					GwLength: 24,
+					DHCP:     true,
+				},
+			},
+			apiGateways: []vnet.VNetDetailedGateway{
+				{Prefix: "192.168.1.1/24", DHCPEnabled: false},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "DHCP option set mismatch",
+			k8sGateways: []k8sv1alpha1.VNetMetaGateway{
+				{
+					Gateway:         "192.168.1.1",
+					GwLength:        24,
+					DHCP:            true,
+					DHCPOptionSetID: 1,
+				},
+			},
+			apiGateways: []vnet.VNetDetailedGateway{
+				{
+					Prefix:      "192.168.1.1/24",
+					DHCPEnabled: true,
+					DHCP: &vnet.VNetGatewayDHCP{
+						OptionSet: vnet.IDName{ID: 2},
+					},
+				},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "different gateway count",
+			k8sGateways: []k8sv1alpha1.VNetMetaGateway{
+				{Gateway: "192.168.1.1", GwLength: 24},
+				{Gateway: "10.0.0.1", GwLength: 24},
+			},
+			apiGateways: []vnet.VNetDetailedGateway{
+				{Prefix: "192.168.1.1/24"},
+			},
+			wantMatch: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := compareVNetMetaAPIVnetGateways(tt.k8sGateways, tt.apiGateways)
+			if got != tt.wantMatch {
+				t.Errorf("got %v, want %v", got, tt.wantMatch)
+			}
+		})
+	}
+}
+
+func TestCompareVNetMetaAPIVnetMembers(t *testing.T) {
+	tests := []struct {
+		name       string
+		k8sMembers []k8sv1alpha1.VNetMetaMember
+		apiMembers []vnet.VNetDetailedPort
+		wantMatch  bool
+	}{
+		{
+			name:       "both empty",
+			k8sMembers: []k8sv1alpha1.VNetMetaMember{},
+			apiMembers: []vnet.VNetDetailedPort{},
+			wantMatch:  true,
+		},
+		{
+			name: "matching members",
+			k8sMembers: []k8sv1alpha1.VNetMetaMember{
+				{ID: 1, Vlan: "100"},
+				{ID: 2, Vlan: "100"},
+			},
+			apiMembers: []vnet.VNetDetailedPort{
+				{ID: 1, Vlan: "100"},
+				{ID: 2, Vlan: "100"},
+			},
+			wantMatch: true,
+		},
+		{
+			name: "port ID mismatch",
+			k8sMembers: []k8sv1alpha1.VNetMetaMember{
+				{ID: 1, Vlan: "100"},
+			},
+			apiMembers: []vnet.VNetDetailedPort{
+				{ID: 2, Vlan: "100"},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "vlan mismatch",
+			k8sMembers: []k8sv1alpha1.VNetMetaMember{
+				{ID: 1, Vlan: "100"},
+			},
+			apiMembers: []vnet.VNetDetailedPort{
+				{ID: 1, Vlan: "200"},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "different count",
+			k8sMembers: []k8sv1alpha1.VNetMetaMember{
+				{ID: 1, Vlan: "100"},
+				{ID: 2, Vlan: "100"},
+			},
+			apiMembers: []vnet.VNetDetailedPort{
+				{ID: 1, Vlan: "100"},
+			},
+			wantMatch: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := compareVNetMetaAPIVnetMembers(tt.k8sMembers, tt.apiMembers)
+			if got != tt.wantMatch {
+				t.Errorf("got %v, want %v", got, tt.wantMatch)
+			}
+		})
+	}
+}
+
+func TestCompareVNetMetaAPIVnetMembersUntagged(t *testing.T) {
+	tests := []struct {
+		name       string
+		k8sSpec    k8sv1alpha1.VNetMetaSpec
+		apiMembers []vnet.VNetDetailedPort
+		wantMatch  bool
+	}{
+		{
+			name: "matching untagged yes",
+			k8sSpec: k8sv1alpha1.VNetMetaSpec{
+				Members: []k8sv1alpha1.VNetMetaMember{
+					{Untagged: "yes"},
+				},
+			},
+			apiMembers: []vnet.VNetDetailedPort{
+				{AccessMode: true},
+			},
+			wantMatch: true,
+		},
+		{
+			name: "matching untagged no with vlan",
+			k8sSpec: k8sv1alpha1.VNetMetaSpec{
+				VlanID: "100",
+				Members: []k8sv1alpha1.VNetMetaMember{
+					{Untagged: "no"},
+				},
+			},
+			apiMembers: []vnet.VNetDetailedPort{
+				{AccessMode: false},
+			},
+			wantMatch: true,
+		},
+		{
+			name: "empty untagged with access mode false and vlan set",
+			k8sSpec: k8sv1alpha1.VNetMetaSpec{
+				VlanID: "100",
+				Members: []k8sv1alpha1.VNetMetaMember{
+					{Untagged: ""},
+				},
+			},
+			apiMembers: []vnet.VNetDetailedPort{
+				{AccessMode: false},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "empty untagged with access mode true",
+			k8sSpec: k8sv1alpha1.VNetMetaSpec{
+				Members: []k8sv1alpha1.VNetMetaMember{
+					{Untagged: ""},
+				},
+			},
+			apiMembers: []vnet.VNetDetailedPort{
+				{AccessMode: true},
+			},
+			wantMatch: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := compareVNetMetaAPIVnetMembersUntagged(tt.k8sSpec, tt.apiMembers)
+			if got != tt.wantMatch {
+				t.Errorf("got %v, want %v", got, tt.wantMatch)
+			}
+		})
+	}
+}
+
+func TestCompareVNetMetaAPIVnet(t *testing.T) {
+	tests := []struct {
+		name      string
+		vnetMeta  *k8sv1alpha1.VNetMeta
+		apiVnet   *vnet.VNetDetailed
+		wantMatch bool
+	}{
+		{
+			name: "all fields match",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "test-vnet",
+					Owner:    "admin",
+					State:    "active",
+					Sites: []k8sv1alpha1.VNetMetaSite{
+						{Name: "site-a"},
+					},
+					Gateways: []k8sv1alpha1.VNetMetaGateway{
+						{Gateway: "192.168.1.1", GwLength: 24},
+					},
+					Members: []k8sv1alpha1.VNetMetaMember{
+						{ID: 1, Vlan: "100"},
+					},
+					Tenants: []string{"tenant-a"},
+				},
+			},
+			apiVnet: &vnet.VNetDetailed{
+				Name:   "test-vnet",
+				Tenant: vnet.VNetDetailedTenant{Name: "admin"},
+				State:  "active",
+				Sites: []vnet.VNetDetailedSite{
+					{Name: "site-a"},
+				},
+				Gateways: []vnet.VNetDetailedGateway{
+					{Prefix: "192.168.1.1/24"},
+				},
+				Ports: []vnet.VNetDetailedPort{
+					{ID: 1, Vlan: "100"},
+				},
+				GuestTenants: []vnet.VNetDetailedGuestTenant{
+					{Name: "tenant-a"},
+				},
+			},
+			wantMatch: true,
+		},
+		{
+			name: "name mismatch",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "vnet-a",
+					Owner:    "admin",
+					State:    "active",
+					Sites:    []k8sv1alpha1.VNetMetaSite{},
+					Gateways: []k8sv1alpha1.VNetMetaGateway{},
+					Members:  []k8sv1alpha1.VNetMetaMember{},
+				},
+			},
+			apiVnet: &vnet.VNetDetailed{
+				Name:   "vnet-b",
+				Tenant: vnet.VNetDetailedTenant{Name: "admin"},
+				State:  "active",
+			},
+			wantMatch: false,
+		},
+		{
+			name: "owner mismatch",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "test-vnet",
+					Owner:    "user-a",
+					State:    "active",
+					Sites:    []k8sv1alpha1.VNetMetaSite{},
+					Gateways: []k8sv1alpha1.VNetMetaGateway{},
+					Members:  []k8sv1alpha1.VNetMetaMember{},
+				},
+			},
+			apiVnet: &vnet.VNetDetailed{
+				Name:   "test-vnet",
+				Tenant: vnet.VNetDetailedTenant{Name: "user-b"},
+				State:  "active",
+			},
+			wantMatch: false,
+		},
+		{
+			name: "state mismatch",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "test-vnet",
+					Owner:    "admin",
+					State:    "active",
+					Sites:    []k8sv1alpha1.VNetMetaSite{},
+					Gateways: []k8sv1alpha1.VNetMetaGateway{},
+					Members:  []k8sv1alpha1.VNetMetaMember{},
+				},
+			},
+			apiVnet: &vnet.VNetDetailed{
+				Name:   "test-vnet",
+				Tenant: vnet.VNetDetailedTenant{Name: "admin"},
+				State:  "disabled",
+			},
+			wantMatch: false,
+		},
+		{
+			name: "sites mismatch",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "test-vnet",
+					Owner:    "admin",
+					State:    "active",
+					Sites: []k8sv1alpha1.VNetMetaSite{
+						{Name: "site-a"},
+					},
+					Gateways: []k8sv1alpha1.VNetMetaGateway{},
+					Members:  []k8sv1alpha1.VNetMetaMember{},
+				},
+			},
+			apiVnet: &vnet.VNetDetailed{
+				Name:   "test-vnet",
+				Tenant: vnet.VNetDetailedTenant{Name: "admin"},
+				State:  "active",
+				Sites: []vnet.VNetDetailedSite{
+					{Name: "site-b"},
+				},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "gateways mismatch",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "test-vnet",
+					Owner:    "admin",
+					State:    "active",
+					Sites: []k8sv1alpha1.VNetMetaSite{
+						{Name: "site-a"},
+					},
+					Gateways: []k8sv1alpha1.VNetMetaGateway{
+						{Gateway: "192.168.1.1", GwLength: 24},
+					},
+					Members: []k8sv1alpha1.VNetMetaMember{},
+				},
+			},
+			apiVnet: &vnet.VNetDetailed{
+				Name:   "test-vnet",
+				Tenant: vnet.VNetDetailedTenant{Name: "admin"},
+				State:  "active",
+				Sites: []vnet.VNetDetailedSite{
+					{Name: "site-a"},
+				},
+				Gateways: []vnet.VNetDetailedGateway{
+					{Prefix: "10.0.0.1/24"},
+				},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "tenants mismatch",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "test-vnet",
+					Owner:    "admin",
+					State:    "active",
+					Sites: []k8sv1alpha1.VNetMetaSite{
+						{Name: "site-a"},
+					},
+					Gateways: []k8sv1alpha1.VNetMetaGateway{},
+					Members:  []k8sv1alpha1.VNetMetaMember{},
+					Tenants:  []string{"tenant-a"},
+				},
+			},
+			apiVnet: &vnet.VNetDetailed{
+				Name:   "test-vnet",
+				Tenant: vnet.VNetDetailedTenant{Name: "admin"},
+				State:  "active",
+				Sites: []vnet.VNetDetailedSite{
+					{Name: "site-a"},
+				},
+				GuestTenants: []vnet.VNetDetailedGuestTenant{
+					{Name: "tenant-b"},
+				},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "members with auto vlan skip member check",
+			vnetMeta: &k8sv1alpha1.VNetMeta{
+				Spec: k8sv1alpha1.VNetMetaSpec{
+					VnetName: "test-vnet",
+					Owner:    "admin",
+					State:    "active",
+					Sites: []k8sv1alpha1.VNetMetaSite{
+						{Name: "site-a"},
+					},
+					Gateways: []k8sv1alpha1.VNetMetaGateway{},
+					Members: []k8sv1alpha1.VNetMetaMember{
+						{ID: 1, Vlan: "auto"},
+					},
+				},
+			},
+			apiVnet: &vnet.VNetDetailed{
+				Name:   "test-vnet",
+				Tenant: vnet.VNetDetailedTenant{Name: "admin"},
+				State:  "active",
+				Sites: []vnet.VNetDetailedSite{
+					{Name: "site-a"},
+				},
+				Ports: []vnet.VNetDetailedPort{
+					{ID: 999, Vlan: "200"},
+				},
+			},
+			wantMatch: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := compareVNetMetaAPIVnet(tt.vnetMeta, tt.apiVnet)
+			if got != tt.wantMatch {
+				t.Errorf("got %v, want %v", got, tt.wantMatch)
+			}
+		})
+	}
+}
+
 func TestVnetCompareFieldsForNewMeta(t *testing.T) {
 	tests := []struct {
 		name            string

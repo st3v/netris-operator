@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
+	"github.com/netrisai/netriswebapi/v2/types/inventory"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -196,6 +197,148 @@ func TestSoftgateUpdateDefaultAnnotations(t *testing.T) {
 			if softgate.GetAnnotations()["resource.k8s.netris.ai/reclaimPolicy"] != tt.expectedReclaimPolicy {
 				t.Errorf("reclaimPolicy: got %q, expected %q",
 					softgate.GetAnnotations()["resource.k8s.netris.ai/reclaimPolicy"], tt.expectedReclaimPolicy)
+			}
+		})
+	}
+}
+
+func TestCompareSoftgateMetaAPIESoftgate(t *testing.T) {
+	tests := []struct {
+		name         string
+		softgateMeta *k8sv1alpha1.SoftgateMeta
+		apiSoftgate  *inventory.HW
+		expected     bool
+	}{
+		{
+			name: "all fields match",
+			softgateMeta: &k8sv1alpha1.SoftgateMeta{
+				Spec: k8sv1alpha1.SoftgateMetaSpec{
+					SoftgateName: "softgate-1",
+					Description:  "Test softgate",
+					TenantID:     1,
+					SiteID:       2,
+					ProfileID:    3,
+					MainIP:       "10.0.0.1",
+					MgmtIP:       "192.168.1.1",
+				},
+			},
+			apiSoftgate: &inventory.HW{
+				Name:        "softgate-1",
+				Description: "Test softgate",
+				Tenant:      inventory.IDName{ID: 1},
+				Site:        inventory.IDName{ID: 2},
+				Profile:     inventory.IDName{ID: 3},
+				MainIP:      inventory.HWMainIP{Address: "10.0.0.1"},
+				MgmtIP:      inventory.HWMgmtIP{Address: "192.168.1.1"},
+			},
+			expected: true,
+		},
+		{
+			name: "name mismatch",
+			softgateMeta: &k8sv1alpha1.SoftgateMeta{
+				Spec: k8sv1alpha1.SoftgateMetaSpec{
+					SoftgateName: "softgate-a",
+				},
+			},
+			apiSoftgate: &inventory.HW{
+				Name: "softgate-b",
+			},
+			expected: false,
+		},
+		{
+			name: "description mismatch",
+			softgateMeta: &k8sv1alpha1.SoftgateMeta{
+				Spec: k8sv1alpha1.SoftgateMetaSpec{
+					SoftgateName: "softgate-1",
+					Description:  "Description A",
+				},
+			},
+			apiSoftgate: &inventory.HW{
+				Name:        "softgate-1",
+				Description: "Description B",
+			},
+			expected: false,
+		},
+		{
+			name: "tenant mismatch",
+			softgateMeta: &k8sv1alpha1.SoftgateMeta{
+				Spec: k8sv1alpha1.SoftgateMetaSpec{
+					SoftgateName: "softgate-1",
+					TenantID:     1,
+				},
+			},
+			apiSoftgate: &inventory.HW{
+				Name:   "softgate-1",
+				Tenant: inventory.IDName{ID: 2},
+			},
+			expected: false,
+		},
+		{
+			name: "site mismatch",
+			softgateMeta: &k8sv1alpha1.SoftgateMeta{
+				Spec: k8sv1alpha1.SoftgateMetaSpec{
+					SoftgateName: "softgate-1",
+					SiteID:       1,
+				},
+			},
+			apiSoftgate: &inventory.HW{
+				Name: "softgate-1",
+				Site: inventory.IDName{ID: 2},
+			},
+			expected: false,
+		},
+		{
+			name: "profile mismatch",
+			softgateMeta: &k8sv1alpha1.SoftgateMeta{
+				Spec: k8sv1alpha1.SoftgateMetaSpec{
+					SoftgateName: "softgate-1",
+					ProfileID:    1,
+				},
+			},
+			apiSoftgate: &inventory.HW{
+				Name:    "softgate-1",
+				Profile: inventory.IDName{ID: 2},
+			},
+			expected: false,
+		},
+		{
+			name: "main IP mismatch",
+			softgateMeta: &k8sv1alpha1.SoftgateMeta{
+				Spec: k8sv1alpha1.SoftgateMetaSpec{
+					SoftgateName: "softgate-1",
+					MainIP:       "10.0.0.1",
+				},
+			},
+			apiSoftgate: &inventory.HW{
+				Name:   "softgate-1",
+				MainIP: inventory.HWMainIP{Address: "10.0.0.2"},
+			},
+			expected: false,
+		},
+		{
+			name: "mgmt IP mismatch",
+			softgateMeta: &k8sv1alpha1.SoftgateMeta{
+				Spec: k8sv1alpha1.SoftgateMetaSpec{
+					SoftgateName: "softgate-1",
+					MgmtIP:       "192.168.1.1",
+				},
+			},
+			apiSoftgate: &inventory.HW{
+				Name:   "softgate-1",
+				MgmtIP: inventory.HWMgmtIP{Address: "192.168.1.2"},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := uniReconciler{
+				DebugLogger: newTestLogger(),
+			}
+			result := compareSoftgateMetaAPIESoftgate(tt.softgateMeta, tt.apiSoftgate, u)
+			if result != tt.expected {
+				t.Errorf("got %v, expected %v", result, tt.expected)
 			}
 		})
 	}

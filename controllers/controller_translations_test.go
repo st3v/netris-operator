@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
+	"github.com/netrisai/netriswebapi/v2/types/inventory"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -188,6 +189,84 @@ func TestControllerUpdateDefaultAnnotations(t *testing.T) {
 			if controller.GetAnnotations()["resource.k8s.netris.ai/reclaimPolicy"] != tt.expectedReclaimPolicy {
 				t.Errorf("reclaimPolicy: got %q, expected %q",
 					controller.GetAnnotations()["resource.k8s.netris.ai/reclaimPolicy"], tt.expectedReclaimPolicy)
+			}
+		})
+	}
+}
+
+func TestCompareControllerMetaAPIEController(t *testing.T) {
+	tests := []struct {
+		name           string
+		controllerMeta *k8sv1alpha1.ControllerMeta
+		apiController  *inventory.HW
+		expected       bool
+	}{
+		{
+			name: "all fields match",
+			controllerMeta: &k8sv1alpha1.ControllerMeta{
+				Spec: k8sv1alpha1.ControllerMetaSpec{
+					ControllerName: "controller-1",
+					Description:    "Test controller",
+					MainIP:         "10.0.0.1",
+				},
+			},
+			apiController: &inventory.HW{
+				Name:        "controller-1",
+				Description: "Test controller",
+				MainIP:      inventory.HWMainIP{Address: "10.0.0.1"},
+			},
+			expected: true,
+		},
+		{
+			name: "name mismatch",
+			controllerMeta: &k8sv1alpha1.ControllerMeta{
+				Spec: k8sv1alpha1.ControllerMetaSpec{
+					ControllerName: "controller-a",
+				},
+			},
+			apiController: &inventory.HW{
+				Name: "controller-b",
+			},
+			expected: false,
+		},
+		{
+			name: "description mismatch",
+			controllerMeta: &k8sv1alpha1.ControllerMeta{
+				Spec: k8sv1alpha1.ControllerMetaSpec{
+					ControllerName: "controller-1",
+					Description:    "Description A",
+				},
+			},
+			apiController: &inventory.HW{
+				Name:        "controller-1",
+				Description: "Description B",
+			},
+			expected: false,
+		},
+		{
+			name: "main IP mismatch",
+			controllerMeta: &k8sv1alpha1.ControllerMeta{
+				Spec: k8sv1alpha1.ControllerMetaSpec{
+					ControllerName: "controller-1",
+					MainIP:         "10.0.0.1",
+				},
+			},
+			apiController: &inventory.HW{
+				Name:   "controller-1",
+				MainIP: inventory.HWMainIP{Address: "10.0.0.2"},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := uniReconciler{
+				DebugLogger: newTestLogger(),
+			}
+			result := compareControllerMetaAPIEController(tt.controllerMeta, tt.apiController, u)
+			if result != tt.expected {
+				t.Errorf("got %v, expected %v", result, tt.expected)
 			}
 		})
 	}
