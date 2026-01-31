@@ -56,7 +56,7 @@ func TestPatchL4LBStatus(t *testing.T) {
 		t.Errorf("expected RequeueAfter to be set")
 	}
 
-	// Verify status was set on the object
+	// Verify status was set on the in-memory object
 	if l4lb.Status.Status != "OK" {
 		t.Errorf("Status: got %q, expected %q", l4lb.Status.Status, "OK")
 	}
@@ -65,6 +65,18 @@ func TestPatchL4LBStatus(t *testing.T) {
 	}
 	if l4lb.Status.State != "active" {
 		t.Errorf("State: got %q, expected %q", l4lb.Status.State, "active")
+	}
+
+	// Verify status was persisted to the fake client
+	updated := &k8sv1alpha1.L4LB{}
+	if err := fakeClient.Get(context.Background(), types.NamespacedName{Name: "test-l4lb", Namespace: "default"}, updated); err != nil {
+		t.Fatalf("failed to get updated L4LB: %v", err)
+	}
+	if updated.Status.Status != "OK" {
+		t.Errorf("persisted Status: got %q, expected %q", updated.Status.Status, "OK")
+	}
+	if updated.Status.Message != "Success" {
+		t.Errorf("persisted Message: got %q, expected %q", updated.Status.Message, "Success")
 	}
 }
 
@@ -182,6 +194,18 @@ func TestPatchSiteStatus(t *testing.T) {
 	}
 	if site.Status.Message != "Site created" {
 		t.Errorf("Message: got %q, expected %q", site.Status.Message, "Site created")
+	}
+
+	// Verify status was persisted to the fake client
+	updated := &k8sv1alpha1.Site{}
+	if err := fakeClient.Get(context.Background(), types.NamespacedName{Name: "test-site", Namespace: "default"}, updated); err != nil {
+		t.Fatalf("failed to get updated Site: %v", err)
+	}
+	if updated.Status.Status != "OK" {
+		t.Errorf("persisted Status: got %q, expected %q", updated.Status.Status, "OK")
+	}
+	if updated.Status.Message != "Site created" {
+		t.Errorf("persisted Message: got %q, expected %q", updated.Status.Message, "Site created")
 	}
 }
 

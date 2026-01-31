@@ -15,6 +15,7 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
 	"testing"
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
@@ -158,6 +159,16 @@ func TestControllerMetaReconciler_DeletionWithReclaim_SkipsAPICall(t *testing.T)
 	if result.Requeue {
 		t.Errorf("expected no requeue, got Requeue=true")
 	}
+
+	// TODO: Unlike SiteMetaReconciler, this controller returns early when DeletionTimestamp
+	// is set without clearing finalizers. This may cause objects to be stuck in terminating
+	// state. See sitemeta_controller.go for the expected deletion pattern.
+	t.Log("WARNING: ControllerMetaReconciler does not clear finalizers on deletion - potential stuck terminating state")
+
+	updated := &k8sv1alpha1.ControllerMeta{}
+	if err := fakeClient.Get(context.Background(), req.NamespacedName, updated); err != nil {
+		t.Fatalf("expected ControllerMeta to still exist, got error: %v", err)
+	}
 }
 
 func TestControllerMetaReconciler_DeletionWithZeroID_SkipsAPICall(t *testing.T) {
@@ -201,6 +212,16 @@ func TestControllerMetaReconciler_DeletionWithZeroID_SkipsAPICall(t *testing.T) 
 
 	if result.Requeue {
 		t.Errorf("expected no requeue, got Requeue=true")
+	}
+
+	// TODO: Unlike SiteMetaReconciler, this controller returns early when DeletionTimestamp
+	// is set without clearing finalizers. This may cause objects to be stuck in terminating
+	// state. See sitemeta_controller.go for the expected deletion pattern.
+	t.Log("WARNING: ControllerMetaReconciler does not clear finalizers on deletion - potential stuck terminating state")
+
+	updated := &k8sv1alpha1.ControllerMeta{}
+	if err := fakeClient.Get(context.Background(), req.NamespacedName, updated); err != nil {
+		t.Fatalf("expected ControllerMeta to still exist, got error: %v", err)
 	}
 }
 
@@ -266,6 +287,15 @@ func TestControllerMetaReconciler_CreateController(t *testing.T) {
 	// Verify the mock client was called to add the controller
 	if mockClient.LastAddID == 0 {
 		t.Error("expected mock client to have recorded the add operation")
+	}
+
+	// Verify ID was set after creation
+	updated := &k8sv1alpha1.ControllerMeta{}
+	if err := fakeClient.Get(context.Background(), req.NamespacedName, updated); err != nil {
+		t.Fatalf("failed to get updated ControllerMeta: %v", err)
+	}
+	if updated.Spec.ID == 0 {
+		t.Error("expected ID to be set after creation, got 0")
 	}
 }
 
@@ -382,8 +412,17 @@ func TestControllerMetaReconciler_DeletionWithID(t *testing.T) {
 		t.Errorf("expected no error, got %v", err)
 	}
 
-	// Deletion with DeletionTimestamp returns early
 	if result.Requeue {
 		t.Errorf("expected no requeue, got Requeue=true")
+	}
+
+	// TODO: Unlike SiteMetaReconciler, this controller returns early when DeletionTimestamp
+	// is set without clearing finalizers. This may cause objects to be stuck in terminating
+	// state. See sitemeta_controller.go for the expected deletion pattern.
+	t.Log("WARNING: ControllerMetaReconciler does not clear finalizers on deletion - potential stuck terminating state")
+
+	updated := &k8sv1alpha1.ControllerMeta{}
+	if err := fakeClient.Get(context.Background(), req.NamespacedName, updated); err != nil {
+		t.Fatalf("expected ControllerMeta to still exist, got error: %v", err)
 	}
 }

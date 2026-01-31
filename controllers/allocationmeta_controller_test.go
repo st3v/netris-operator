@@ -234,13 +234,25 @@ func TestAllocationMetaReconciler_CreateAllocation(t *testing.T) {
 		},
 	}
 
-	_, err := r.Reconcile(req)
+	result, err := r.Reconcile(req)
 
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
-}
 
+	if result.Requeue {
+		t.Errorf("expected no immediate requeue, got Requeue=true")
+	}
+
+	// Verify ID was set after creation
+	updated := &k8sv1alpha1.AllocationMeta{}
+	if err := fakeClient.Get(context.Background(), req.NamespacedName, updated); err != nil {
+		t.Fatalf("failed to get updated AllocationMeta: %v", err)
+	}
+	if updated.Spec.ID == 0 {
+		t.Error("expected ID to be set after creation, got 0")
+	}
+}
 
 func TestAllocationMetaReconciler_DeletionWithID(t *testing.T) {
 	scheme := newTestScheme()

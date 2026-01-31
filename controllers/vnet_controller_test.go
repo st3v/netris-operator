@@ -584,11 +584,13 @@ func TestVnetToVnetMeta_WithGateways(t *testing.T) {
 
 func TestVNetReconciler_deleteVNet(t *testing.T) {
 	tests := []struct {
-		name      string
-		vnetMeta  *k8sv1alpha1.VNetMeta
-		deleteErr error
-		wantErr   bool
-		errSubstr string
+		name            string
+		vnetMeta        *k8sv1alpha1.VNetMeta
+		deleteErr       error
+		wantErr         bool
+		errSubstr       string
+		wantMetaDeleted bool
+		wantFinCleared  bool
 	}{
 		{
 			name: "success - deletes via API and CRs",
@@ -602,17 +604,21 @@ func TestVNetReconciler_deleteVNet(t *testing.T) {
 					Reclaim: false,
 				},
 			},
-			deleteErr: nil,
-			wantErr:   false,
+			deleteErr:       nil,
+			wantErr:         false,
+			wantMetaDeleted: true,
+			wantFinCleared:  true,
 		},
 		{
-			name:      "nil meta - only deletes CR",
-			vnetMeta:  nil,
-			deleteErr: nil,
-			wantErr:   false,
+			name:            "nil meta - only deletes CR",
+			vnetMeta:        nil,
+			deleteErr:       nil,
+			wantErr:         false,
+			wantMetaDeleted: false, // no meta to delete
+			wantFinCleared:  true,
 		},
 		{
-			name: "reclaim true - skips API call",
+			name: "reclaim true - skips API call but deletes CRs",
 			vnetMeta: &k8sv1alpha1.VNetMeta{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vnet-meta-reclaim",
@@ -623,11 +629,13 @@ func TestVNetReconciler_deleteVNet(t *testing.T) {
 					Reclaim: true,
 				},
 			},
-			deleteErr: nil,
-			wantErr:   false,
+			deleteErr:       nil,
+			wantErr:         false,
+			wantMetaDeleted: true,
+			wantFinCleared:  true,
 		},
 		{
-			name: "zero ID - skips API call",
+			name: "zero ID - skips API call but deletes CRs",
 			vnetMeta: &k8sv1alpha1.VNetMeta{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vnet-meta-zero",
@@ -638,11 +646,13 @@ func TestVNetReconciler_deleteVNet(t *testing.T) {
 					Reclaim: false,
 				},
 			},
-			deleteErr: nil,
-			wantErr:   false,
+			deleteErr:       nil,
+			wantErr:         false,
+			wantMetaDeleted: true,
+			wantFinCleared:  true,
 		},
 		{
-			name: "API error",
+			name: "API error - does not delete CRs",
 			vnetMeta: &k8sv1alpha1.VNetMeta{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vnet-meta-err",
@@ -653,9 +663,11 @@ func TestVNetReconciler_deleteVNet(t *testing.T) {
 					Reclaim: false,
 				},
 			},
-			deleteErr: errors.New("connection refused"),
-			wantErr:   true,
-			errSubstr: "connection refused",
+			deleteErr:       errors.New("connection refused"),
+			wantErr:         true,
+			errSubstr:       "connection refused",
+			wantMetaDeleted: false,
+			wantFinCleared:  false,
 		},
 	}
 
@@ -665,8 +677,9 @@ func TestVNetReconciler_deleteVNet(t *testing.T) {
 
 			vnet := &k8sv1alpha1.VNet{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-vnet",
-					Namespace: "default",
+					Name:       "test-vnet",
+					Namespace:  "default",
+					Finalizers: []string{"resource.k8s.netris.ai/delete"},
 				},
 			}
 
@@ -692,6 +705,26 @@ func TestVNetReconciler_deleteVNet(t *testing.T) {
 			if tt.wantErr && err != nil && tt.errSubstr != "" {
 				if !containsSubstr(err.Error(), tt.errSubstr) {
 					t.Errorf("error %q does not contain %q", err.Error(), tt.errSubstr)
+				}
+			}
+
+			// Verify VNet finalizers were cleared
+			if tt.wantFinCleared {
+				updated := &k8sv1alpha1.VNet{}
+				if err := fakeClient.Get(context.Background(), types.NamespacedName{Name: "test-vnet", Namespace: "default"}, updated); err != nil {
+					t.Fatalf("failed to get VNet: %v", err)
+				}
+				if len(updated.GetFinalizers()) != 0 {
+					t.Errorf("expected finalizers cleared, got %v", updated.GetFinalizers())
+				}
+			}
+
+			// Verify VNetMeta was deleted
+			if tt.wantMetaDeleted && tt.vnetMeta != nil {
+				meta := &k8sv1alpha1.VNetMeta{}
+				err := fakeClient.Get(context.Background(), types.NamespacedName{Name: tt.vnetMeta.Name, Namespace: tt.vnetMeta.Namespace}, meta)
+				if err == nil {
+					t.Errorf("expected VNetMeta to be deleted, but it still exists")
 				}
 			}
 		})
