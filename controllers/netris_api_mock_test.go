@@ -50,13 +50,17 @@ func errorReply(message string) http.HTTPReply {
 
 // MockBGPClient implements BGPClient for testing.
 type MockBGPClient struct {
-	AddFunc    func(bgp *bgp.EBGPAdd) (http.HTTPReply, error)
-	UpdateFunc func(id int, bgp *bgp.EBGPUpdate) (http.HTTPReply, error)
-	DeleteFunc func(id int) (http.HTTPReply, error)
-	AddErr     error
-	UpdateErr  error
-	DeleteErr  error
-	LastAddID  int
+	AddFunc      func(bgp *bgp.EBGPAdd) (http.HTTPReply, error)
+	UpdateFunc   func(id int, bgp *bgp.EBGPUpdate) (http.HTTPReply, error)
+	DeleteFunc   func(id int) (http.HTTPReply, error)
+	AddErr       error
+	UpdateErr    error
+	DeleteErr    error
+	LastAddID    int
+	DeleteCalled bool
+	LastDeleteID int
+	UpdateCalled bool
+	LastUpdateID int
 }
 
 func (m *MockBGPClient) Add(b *bgp.EBGPAdd) (http.HTTPReply, error) {
@@ -71,6 +75,8 @@ func (m *MockBGPClient) Add(b *bgp.EBGPAdd) (http.HTTPReply, error) {
 }
 
 func (m *MockBGPClient) Update(id int, b *bgp.EBGPUpdate) (http.HTTPReply, error) {
+	m.UpdateCalled = true
+	m.LastUpdateID = id
 	if m.UpdateFunc != nil {
 		return m.UpdateFunc(id, b)
 	}
@@ -81,6 +87,8 @@ func (m *MockBGPClient) Update(id int, b *bgp.EBGPUpdate) (http.HTTPReply, error
 }
 
 func (m *MockBGPClient) Delete(id int) (http.HTTPReply, error) {
+	m.DeleteCalled = true
+	m.LastDeleteID = id
 	if m.DeleteFunc != nil {
 		return m.DeleteFunc(id)
 	}
@@ -276,10 +284,12 @@ func (m *MockIPAMClient) Delete(kind string, id int) (http.HTTPReply, error) {
 
 // MockL4LBClient implements L4LBClient for testing.
 type MockL4LBClient struct {
-	AddErr    error
-	UpdateErr error
-	DeleteErr error
-	LastAddID int
+	AddErr       error
+	UpdateErr    error
+	DeleteErr    error
+	LastAddID    int
+	DeleteCalled bool
+	LastDeleteID int
 }
 
 func (m *MockL4LBClient) Add(lb *l4lb.LoadBalancerAdd) (http.HTTPReply, error) {
@@ -298,6 +308,8 @@ func (m *MockL4LBClient) Update(id int, lb *l4lb.LoadBalancerUpdate) (http.HTTPR
 }
 
 func (m *MockL4LBClient) Delete(id int) (http.HTTPReply, error) {
+	m.DeleteCalled = true
+	m.LastDeleteID = id
 	if m.DeleteErr != nil {
 		return http.HTTPReply{}, m.DeleteErr
 	}

@@ -16,9 +16,11 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
+	"github.com/netrisai/netriswebapi/v2/types/bgp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -238,12 +240,13 @@ func TestBGPMetaReconciler_DeletionWithID(t *testing.T) {
 
 	fakeClient := fake.NewFakeClientWithScheme(scheme, bgpMeta, bgpCR)
 
+	mockClient := &MockBGPClient{}
 	r := &BGPMetaReconciler{
 		Client:    fakeClient,
 		Log:       newTestLogger(),
 		Scheme:    scheme,
 		NStorage:  newTestStorage(nil),
-		BGPClient: &MockBGPClient{},
+		BGPClient: mockClient,
 	}
 
 	req := ctrl.Request{
@@ -260,5 +263,73 @@ func TestBGPMetaReconciler_DeletionWithID(t *testing.T) {
 	}
 	if result.Requeue {
 		t.Errorf("expected no requeue, got Requeue=true")
+	}
+
+	// Note: BGPMeta controller returns early when DeletionTimestamp is set.
+	// Actual deletion is handled by the parent BGP controller.
+	// The BGPMeta reconciler should NOT call the API delete.
+	if mockClient.DeleteCalled {
+		t.Error("BGPMeta reconciler should not call API Delete - that's handled by BGP controller")
+	}
+}
+
+func TestUpdateBGP(t *testing.T) {
+	tests := []struct {
+		name        string
+		mockErr     error
+		wantErr     bool
+		errSubstr   string
+		wantRequeue bool
+	}{
+		{
+			name:        "success",
+			mockErr:     nil,
+			wantErr:     false,
+			wantRequeue: false,
+		},
+		{
+			name:        "client error",
+			mockErr:     errors.New("connection refused"),
+			wantErr:     true,
+			errSubstr:   "connection refused",
+			wantRequeue: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := &MockBGPClient{UpdateErr: tt.mockErr}
+
+			update := &bgp.EBGPUpdate{
+				Name: "test-bgp",
+			}
+
+			result, err, _ := updateBGP(1, update, mockClient)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("updateBGP() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errSubstr != "" {
+				if !containsSubstr(err.Error(), tt.errSubstr) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errSubstr)
+				}
+			}
+			if !tt.wantErr {
+				if result.Requeue != tt.wantRequeue {
+					t.Errorf("result.Requeue = %v, want %v", result.Requeue, tt.wantRequeue)
+				}
+				if result.RequeueAfter != 0 {
+					t.Errorf("result.RequeueAfter = %v, want 0", result.RequeueAfter)
+				}
+			}
+
+			// Verify mock was called
+			if !mockClient.UpdateCalled {
+				t.Error("expected Update to be called")
+			}
+			if mockClient.LastUpdateID != 1 {
+				t.Errorf("expected Update called with ID 1, got %d", mockClient.LastUpdateID)
+			}
+		})
 	}
 }
