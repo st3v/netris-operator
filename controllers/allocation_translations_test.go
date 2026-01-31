@@ -342,10 +342,7 @@ func TestCompareAllocationMetaAPIEAllocation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u := uniReconciler{
-				DebugLogger: newTestLogger(),
-			}
-			result := compareAllocationMetaAPIEAllocation(tt.allocationMeta, tt.apiAllocation, u)
+			result := compareAllocationMetaAPIEAllocation(tt.allocationMeta, tt.apiAllocation, newTestLogger())
 			if result != tt.expected {
 				t.Errorf("got %v, expected %v", result, tt.expected)
 			}

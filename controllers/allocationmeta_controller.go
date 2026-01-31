@@ -130,7 +130,7 @@ func (r *AllocationMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		if apiAllocation, ok := r.NStorage.SubnetsStorage.FindByID(allocationMeta.Spec.ID, "allocation"); ok {
 
 			debugLogger.Info("Comparing AllocationMeta with Netris Allocation")
-			if ok := compareAllocationMetaAPIEAllocation(allocationMeta, apiAllocation, u); ok {
+			if ok := compareAllocationMetaAPIEAllocation(allocationMeta, apiAllocation, u.DebugLogger); ok {
 				debugLogger.Info("Nothing Changed")
 			} else {
 				debugLogger.Info("Go to update Allocation in Netris")

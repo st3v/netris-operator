@@ -133,7 +133,7 @@ func (r *NatMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if apiNat, ok := r.NStorage.NATStorage.FindByID(natMeta.Spec.ID); ok {
 
 			debugLogger.Info("Comparing NatMeta with Netris Nat")
-			if ok := compareNatMetaAPIENat(natMeta, apiNat, u); ok {
+			if ok := compareNatMetaAPIENat(natMeta, apiNat, u.DebugLogger); ok {
 				debugLogger.Info("Nothing Changed")
 			} else {
 				debugLogger.Info("Go to update Nat in Netris")

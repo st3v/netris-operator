@@ -22,7 +22,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-logr/logr"
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
+	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/v2/types/bgp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -307,45 +309,45 @@ func BGPMetaToNetrisUpdate(bgpMeta *k8sv1alpha1.BGPMeta) (*bgp.EBGPUpdate, error
 	return bgpAdd, nil
 }
 
-func compareBGPMetaAPIEBGP(bgpMeta *k8sv1alpha1.BGPMeta, apiBGP *bgp.EBGP, u uniReconciler) bool {
+func compareBGPMetaAPIEBGP(bgpMeta *k8sv1alpha1.BGPMeta, apiBGP *bgp.EBGP, storage *netrisstorage.Storage, logger logr.InfoLogger) bool {
 	if apiBGP.AllowasIn != bgpMeta.Spec.AllowasIn {
-		u.DebugLogger.Info("AllowasIn changed", "netrisValue", apiBGP.AllowasIn, "k8sValue", bgpMeta.Spec.AllowasIn)
+		logger.Info("AllowasIn changed", "netrisValue", apiBGP.AllowasIn, "k8sValue", bgpMeta.Spec.AllowasIn)
 		return false
 	}
 	if apiBGP.BgpPassword != bgpMeta.Spec.BgpPassword {
-		u.DebugLogger.Info("BgpPassword changed", "netrisValue", apiBGP.BgpPassword, "k8sValue", bgpMeta.Spec.BgpPassword)
+		logger.Info("BgpPassword changed", "netrisValue", apiBGP.BgpPassword, "k8sValue", bgpMeta.Spec.BgpPassword)
 		return false
 	}
 	if apiBGP.Community != bgpMeta.Spec.Community {
-		u.DebugLogger.Info("Community changed", "netrisValue", apiBGP.Community, "k8sValue", bgpMeta.Spec.Community)
+		logger.Info("Community changed", "netrisValue", apiBGP.Community, "k8sValue", bgpMeta.Spec.Community)
 		return false
 	}
 	if apiBGP.Description != bgpMeta.Spec.Description {
-		u.DebugLogger.Info("Description changed", "netrisValue", apiBGP.Description, "k8sValue", bgpMeta.Spec.Description)
+		logger.Info("Description changed", "netrisValue", apiBGP.Description, "k8sValue", bgpMeta.Spec.Description)
 		return false
 	}
 	if apiBGP.InboundRouteMap != bgpMeta.Spec.InboundRouteMap {
-		u.DebugLogger.Info("InboundRouteMap changed", "netrisValue", apiBGP.InboundRouteMap, "k8sValue", bgpMeta.Spec.InboundRouteMap)
+		logger.Info("InboundRouteMap changed", "netrisValue", apiBGP.InboundRouteMap, "k8sValue", bgpMeta.Spec.InboundRouteMap)
 		return false
 	}
 	if apiBGP.IPVersion != bgpMeta.Spec.IPVersion {
-		u.DebugLogger.Info("IPVersion changed", "netrisValue", apiBGP.IPVersion, "k8sValue", bgpMeta.Spec.IPVersion)
+		logger.Info("IPVersion changed", "netrisValue", apiBGP.IPVersion, "k8sValue", bgpMeta.Spec.IPVersion)
 		return false
 	}
 	if apiBGP.LocalIP != bgpMeta.Spec.LocalIP {
-		u.DebugLogger.Info("LocalIP changed", "netrisValue", apiBGP.LocalIP, "k8sValue", bgpMeta.Spec.LocalIP)
+		logger.Info("LocalIP changed", "netrisValue", apiBGP.LocalIP, "k8sValue", bgpMeta.Spec.LocalIP)
 		return false
 	}
 	if apiBGP.LocalPreference != bgpMeta.Spec.LocalPreference {
-		u.DebugLogger.Info("LocalPreference changed", "netrisValue", apiBGP.LocalPreference, "k8sValue", bgpMeta.Spec.LocalPreference)
+		logger.Info("LocalPreference changed", "netrisValue", apiBGP.LocalPreference, "k8sValue", bgpMeta.Spec.LocalPreference)
 		return false
 	}
 	if apiBGP.Multihop != bgpMeta.Spec.Multihop {
-		u.DebugLogger.Info("Multihop changed", "netrisValue", apiBGP.Multihop, "k8sValue", bgpMeta.Spec.Multihop)
+		logger.Info("Multihop changed", "netrisValue", apiBGP.Multihop, "k8sValue", bgpMeta.Spec.Multihop)
 		return false
 	}
 	if apiBGP.Name != bgpMeta.Spec.BGPName {
-		u.DebugLogger.Info("Name changed", "netrisValue", apiBGP.Name, "k8sValue", bgpMeta.Spec.BGPName)
+		logger.Info("Name changed", "netrisValue", apiBGP.Name, "k8sValue", bgpMeta.Spec.BGPName)
 		return false
 	}
 	neighborAddress := ""
@@ -353,62 +355,62 @@ func compareBGPMetaAPIEBGP(bgpMeta *k8sv1alpha1.BGPMeta, apiBGP *bgp.EBGP, u uni
 		neighborAddress = bgpMeta.Spec.NeighborAddress
 	}
 	if apiBGP.NeighborAddress != neighborAddress {
-		u.DebugLogger.Info("NeighborAddress changed", "netrisValue", apiBGP.NeighborAddress, "k8sValue", neighborAddress)
+		logger.Info("NeighborAddress changed", "netrisValue", apiBGP.NeighborAddress, "k8sValue", neighborAddress)
 		return false
 	}
 	if apiBGP.NeighborAs != bgpMeta.Spec.NeighborAs {
-		u.DebugLogger.Info("NeighborAs changed", "netrisValue", apiBGP.NeighborAs, "k8sValue", bgpMeta.Spec.NeighborAs)
+		logger.Info("NeighborAs changed", "netrisValue", apiBGP.NeighborAs, "k8sValue", bgpMeta.Spec.NeighborAs)
 		return false
 	}
-	if port, ok := u.NStorage.PortsStorage.FindByID(apiBGP.Port.ID); ok {
+	if port, ok := storage.PortsStorage.FindByID(apiBGP.Port.ID); ok {
 		if port.ID != bgpMeta.Spec.PortID {
-			u.DebugLogger.Info("Port changed", "netrisValue", port.ID, "k8sValue", bgpMeta.Spec.PortID)
+			logger.Info("Port changed", "netrisValue", port.ID, "k8sValue", bgpMeta.Spec.PortID)
 			return false
 		}
 	}
 	if apiBGP.Originate != bgpMeta.Spec.Originate {
-		u.DebugLogger.Info("Originate changed", "netrisValue", apiBGP.Originate, "k8sValue", bgpMeta.Spec.Originate)
+		logger.Info("Originate changed", "netrisValue", apiBGP.Originate, "k8sValue", bgpMeta.Spec.Originate)
 		return false
 	}
 	if apiBGP.OutboundRouteMap != bgpMeta.Spec.OutboundRouteMap {
-		u.DebugLogger.Info("OutboundRouteMap changed", "netrisValue", apiBGP.OutboundRouteMap, "k8sValue", bgpMeta.Spec.OutboundRouteMap)
+		logger.Info("OutboundRouteMap changed", "netrisValue", apiBGP.OutboundRouteMap, "k8sValue", bgpMeta.Spec.OutboundRouteMap)
 		return false
 	}
 	if apiBGP.PrefixLength != bgpMeta.Spec.PrefixLength {
-		u.DebugLogger.Info("PrefixLength changed", "netrisValue", apiBGP.PrefixLength, "k8sValue", bgpMeta.Spec.PrefixLength)
+		logger.Info("PrefixLength changed", "netrisValue", apiBGP.PrefixLength, "k8sValue", bgpMeta.Spec.PrefixLength)
 		return false
 	}
 	prefixLimit, _ := strconv.Atoi(bgpMeta.Spec.PrefixLimit)
 	if apiBGP.PrefixLimit != prefixLimit && !(apiBGP.PrefixLimit == 1000 && prefixLimit == 0 && apiBGP.TerminateOnSwitch == "yes") {
-		u.DebugLogger.Info("PrefixLimit changed", "netrisValue", apiBGP.PrefixLimit, "k8sValue", prefixLimit)
+		logger.Info("PrefixLimit changed", "netrisValue", apiBGP.PrefixLimit, "k8sValue", prefixLimit)
 		return false
 	}
 	if apiBGP.PrefixListInbound != bgpMeta.Spec.PrefixListInbound {
-		u.DebugLogger.Info("PrefixListInbound changed", "netrisValue", apiBGP.PrefixListInbound, "k8sValue", bgpMeta.Spec.PrefixListInbound)
+		logger.Info("PrefixListInbound changed", "netrisValue", apiBGP.PrefixListInbound, "k8sValue", bgpMeta.Spec.PrefixListInbound)
 		return false
 	}
 	if apiBGP.PrefixListOutbound != bgpMeta.Spec.PrefixListOutbound {
-		u.DebugLogger.Info("PrefixListOutbound changed", "netrisValue", apiBGP.PrefixListOutbound, "k8sValue", bgpMeta.Spec.PrefixListOutbound)
+		logger.Info("PrefixListOutbound changed", "netrisValue", apiBGP.PrefixListOutbound, "k8sValue", bgpMeta.Spec.PrefixListOutbound)
 		return false
 	}
 	if apiBGP.PrependInbound != bgpMeta.Spec.PrependInbound {
-		u.DebugLogger.Info("PrependInbound changed", "netrisValue", apiBGP.PrependInbound, "k8sValue", bgpMeta.Spec.PrependInbound)
+		logger.Info("PrependInbound changed", "netrisValue", apiBGP.PrependInbound, "k8sValue", bgpMeta.Spec.PrependInbound)
 		return false
 	}
 	if apiBGP.PrependOutbound != bgpMeta.Spec.PrependInbound {
-		u.DebugLogger.Info("PrependOutbound changed", "netrisValue", apiBGP.PrependOutbound, "k8sValue", bgpMeta.Spec.PrependOutbound)
+		logger.Info("PrependOutbound changed", "netrisValue", apiBGP.PrependOutbound, "k8sValue", bgpMeta.Spec.PrependOutbound)
 		return false
 	}
 	if apiBGP.RemoteIP != bgpMeta.Spec.RemoteIP {
-		u.DebugLogger.Info("RemoteIP changed", "netrisValue", apiBGP.RemoteIP, "k8sValue", bgpMeta.Spec.RemoteIP)
+		logger.Info("RemoteIP changed", "netrisValue", apiBGP.RemoteIP, "k8sValue", bgpMeta.Spec.RemoteIP)
 		return false
 	}
 	if apiBGP.SiteName != bgpMeta.Spec.Site {
-		u.DebugLogger.Info("SiteName changed", "netrisValue", apiBGP.SiteName, "k8sValue", bgpMeta.Spec.Site)
+		logger.Info("SiteName changed", "netrisValue", apiBGP.SiteName, "k8sValue", bgpMeta.Spec.Site)
 		return false
 	}
 	if apiBGP.Status != bgpMeta.Spec.Status {
-		u.DebugLogger.Info("Status changed", "netrisValue", apiBGP.Status, "k8sValue", bgpMeta.Spec.Status)
+		logger.Info("Status changed", "netrisValue", apiBGP.Status, "k8sValue", bgpMeta.Spec.Status)
 		return false
 	}
 	// if apiBGP.PortName != bgpMeta.Spec.Port {
@@ -420,17 +422,17 @@ func compareBGPMetaAPIEBGP(bgpMeta *k8sv1alpha1.BGPMeta, apiBGP *bgp.EBGP, u uni
 	// }
 
 	if apiBGP.UpdateSource != bgpMeta.Spec.UpdateSource {
-		u.DebugLogger.Info("UpdateSource changed", "netrisValue", apiBGP.UpdateSource, "k8sValue", bgpMeta.Spec.UpdateSource)
+		logger.Info("UpdateSource changed", "netrisValue", apiBGP.UpdateSource, "k8sValue", bgpMeta.Spec.UpdateSource)
 		return false
 	}
 	if apiBGP.Vlan != bgpMeta.Spec.Vlan {
 		if bgpMeta.Spec.Vlan != -1 {
-			u.DebugLogger.Info("Vlan changed", "netrisValue", apiBGP.Vlan, "k8sValue", bgpMeta.Spec.Vlan)
+			logger.Info("Vlan changed", "netrisValue", apiBGP.Vlan, "k8sValue", bgpMeta.Spec.Vlan)
 			return false
 		}
 	}
 	if apiBGP.Weight != bgpMeta.Spec.Weight {
-		u.DebugLogger.Info("Weight changed", "netrisValue", apiBGP.Weight, "k8sValue", bgpMeta.Spec.Weight)
+		logger.Info("Weight changed", "netrisValue", apiBGP.Weight, "k8sValue", bgpMeta.Spec.Weight)
 		return false
 	}
 

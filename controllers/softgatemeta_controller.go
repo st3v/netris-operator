@@ -143,7 +143,7 @@ func (r *SoftgateMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				softgateMeta.Spec.MgmtIP = apiSoftgate.MgmtIP.Address
 			}
 
-			if ok := compareSoftgateMetaAPIESoftgate(softgateMeta, apiSoftgate, u); ok {
+			if ok := compareSoftgateMetaAPIESoftgate(softgateMeta, apiSoftgate, u.DebugLogger); ok {
 				debugLogger.Info("Nothing Changed")
 			} else {
 				debugLogger.Info("Go to update Softgate in Netris")

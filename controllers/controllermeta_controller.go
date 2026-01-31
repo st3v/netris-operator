@@ -134,7 +134,7 @@ func (r *ControllerMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		if apiController, ok := r.NStorage.HWsStorage.FindControllerByID(controllerMeta.Spec.ID); ok {
 			debugLogger.Info("Comparing ControllerMeta with Netris Controller")
 
-			if ok := compareControllerMetaAPIEController(controllerMeta, apiController, u); ok {
+			if ok := compareControllerMetaAPIEController(controllerMeta, apiController, u.DebugLogger); ok {
 				debugLogger.Info("Nothing Changed")
 			} else {
 				debugLogger.Info("Go to update Controller in Netris")

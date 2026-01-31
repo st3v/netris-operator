@@ -132,7 +132,7 @@ func (r *SubnetMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	} else {
 		if apiSubnet, ok := r.NStorage.SubnetsStorage.FindByID(subnetMeta.Spec.ID, "subnet"); ok {
 			debugLogger.Info("Comparing SubnetMeta with Netris Subnet")
-			if ok := compareSubnetMetaAPIESubnet(subnetMeta, apiSubnet, u); ok {
+			if ok := compareSubnetMetaAPIESubnet(subnetMeta, apiSubnet, u.DebugLogger); ok {
 				debugLogger.Info("Nothing Changed")
 			} else {
 				debugLogger.Info("Go to update Subnet in Netris")

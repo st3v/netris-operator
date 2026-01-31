@@ -19,6 +19,7 @@ package controllers
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netriswebapi/v2/types/inventory"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -144,19 +145,19 @@ func ControllerMetaToNetrisUpdate(controllerMeta *k8sv1alpha1.ControllerMeta) (*
 	return controllerUpdate, nil
 }
 
-func compareControllerMetaAPIEController(controllerMeta *k8sv1alpha1.ControllerMeta, apiController *inventory.HW, u uniReconciler) bool {
+func compareControllerMetaAPIEController(controllerMeta *k8sv1alpha1.ControllerMeta, apiController *inventory.HW, logger logr.InfoLogger) bool {
 	if apiController.Name != controllerMeta.Spec.ControllerName {
-		u.DebugLogger.Info("Name changed", "netrisValue", apiController.Name, "k8sValue", controllerMeta.Spec.ControllerName)
+		logger.Info("Name changed", "netrisValue", apiController.Name, "k8sValue", controllerMeta.Spec.ControllerName)
 		return false
 	}
 
 	if apiController.Description != controllerMeta.Spec.Description {
-		u.DebugLogger.Info("Description changed", "netrisValue", apiController.Description, "k8sValue", controllerMeta.Spec.Description)
+		logger.Info("Description changed", "netrisValue", apiController.Description, "k8sValue", controllerMeta.Spec.Description)
 		return false
 	}
 
 	if apiController.MainIP.Address != controllerMeta.Spec.MainIP {
-		u.DebugLogger.Info("MainIP changed", "netrisValue", apiController.MainIP.Address, "k8sValue", controllerMeta.Spec.MainIP)
+		logger.Info("MainIP changed", "netrisValue", apiController.MainIP.Address, "k8sValue", controllerMeta.Spec.MainIP)
 		return false
 	}
 

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/go-logr/logr"
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netriswebapi/v1/types/inventoryprofile"
 	"github.com/r3labs/diff/v2"
@@ -166,40 +167,40 @@ func InventoryProfileMetaToNetrisUpdate(inventoryProfileMeta *k8sv1alpha1.Invent
 	return inventoryProfileAdd, nil
 }
 
-func compareInventoryProfileMetaAPIEInventoryProfile(inventoryProfileMeta *k8sv1alpha1.InventoryProfileMeta, apiInventoryProfile *inventoryprofile.Profile, u uniReconciler) bool {
+func compareInventoryProfileMetaAPIEInventoryProfile(inventoryProfileMeta *k8sv1alpha1.InventoryProfileMeta, apiInventoryProfile *inventoryprofile.Profile, logger logr.InfoLogger) bool {
 	if apiInventoryProfile.Name != inventoryProfileMeta.Spec.InventoryProfileName {
-		u.DebugLogger.Info("Name changed", "netrisValue", apiInventoryProfile.Name, "k8sValue", inventoryProfileMeta.Spec.InventoryProfileName)
+		logger.Info("Name changed", "netrisValue", apiInventoryProfile.Name, "k8sValue", inventoryProfileMeta.Spec.InventoryProfileName)
 		return false
 	}
 	if apiInventoryProfile.Description != inventoryProfileMeta.Spec.Description {
-		u.DebugLogger.Info("Description changed", "netrisValue", apiInventoryProfile.Description, "k8sValue", inventoryProfileMeta.Spec.Description)
+		logger.Info("Description changed", "netrisValue", apiInventoryProfile.Description, "k8sValue", inventoryProfileMeta.Spec.Description)
 		return false
 	}
 	timeZone := unmarshalTimezone(apiInventoryProfile.Timezone)
 	if timeZone.TzCode != inventoryProfileMeta.Spec.Timezone {
-		u.DebugLogger.Info("Timezone changed", "netrisValue", timeZone.TzCode, "k8sValue", inventoryProfileMeta.Spec.Timezone)
+		logger.Info("Timezone changed", "netrisValue", timeZone.TzCode, "k8sValue", inventoryProfileMeta.Spec.Timezone)
 		return false
 	}
 
 	if changelog, _ := diff.Diff(strings.Join(inventoryProfileMeta.Spec.AllowSSHFromIPv4, ","), apiInventoryProfile.Ipv4SSH); len(changelog) > 0 {
-		u.DebugLogger.Info("AllowSSHFromIPv4 changed", "netrisValue", apiInventoryProfile.Ipv4SSH, "k8sValue", strings.Join(inventoryProfileMeta.Spec.AllowSSHFromIPv4, ","))
+		logger.Info("AllowSSHFromIPv4 changed", "netrisValue", apiInventoryProfile.Ipv4SSH, "k8sValue", strings.Join(inventoryProfileMeta.Spec.AllowSSHFromIPv4, ","))
 		return false
 	}
 	if changelog, _ := diff.Diff(strings.Join(inventoryProfileMeta.Spec.AllowSSHFromIPv6, ","), apiInventoryProfile.Ipv6SSH); len(changelog) > 0 {
-		u.DebugLogger.Info("AllowSSHFromIPv6 changed", "netrisValue", apiInventoryProfile.Ipv6SSH, "k8sValue", strings.Join(inventoryProfileMeta.Spec.AllowSSHFromIPv6, ","))
+		logger.Info("AllowSSHFromIPv6 changed", "netrisValue", apiInventoryProfile.Ipv6SSH, "k8sValue", strings.Join(inventoryProfileMeta.Spec.AllowSSHFromIPv6, ","))
 		return false
 	}
 	if changelog, _ := diff.Diff(strings.Join(inventoryProfileMeta.Spec.NTPServers, ","), apiInventoryProfile.NTPServers); len(changelog) > 0 {
-		u.DebugLogger.Info("NTPServers changed", "netrisValue", apiInventoryProfile.NTPServers, "k8sValue", strings.Join(inventoryProfileMeta.Spec.NTPServers, ","))
+		logger.Info("NTPServers changed", "netrisValue", apiInventoryProfile.NTPServers, "k8sValue", strings.Join(inventoryProfileMeta.Spec.NTPServers, ","))
 		return false
 	}
 	if changelog, _ := diff.Diff(strings.Join(inventoryProfileMeta.Spec.DNSServers, ","), apiInventoryProfile.DNSServers); len(changelog) > 0 {
-		u.DebugLogger.Info("DNSServers changed", "netrisValue", apiInventoryProfile.DNSServers, "k8sValue", strings.Join(inventoryProfileMeta.Spec.DNSServers, ","))
+		logger.Info("DNSServers changed", "netrisValue", apiInventoryProfile.DNSServers, "k8sValue", strings.Join(inventoryProfileMeta.Spec.DNSServers, ","))
 		return false
 	}
 
 	if ok := compareInventoryProfileAPIInventoryProfileCustomRules(inventoryProfileMeta.Spec.CustomRules, apiInventoryProfile.CustomRules); !ok {
-		u.DebugLogger.Info("CustomRules changed", "netrisValue", apiInventoryProfile.CustomRules, "k8sValue", inventoryProfileMeta.Spec.CustomRules, ",")
+		logger.Info("CustomRules changed", "netrisValue", apiInventoryProfile.CustomRules, "k8sValue", inventoryProfileMeta.Spec.CustomRules, ",")
 		return false
 	}
 

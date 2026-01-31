@@ -19,6 +19,7 @@ package controllers
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netriswebapi/v2/types/ipam"
 	"github.com/r3labs/diff/v2"
@@ -151,29 +152,29 @@ func SubnetMetaToNetrisUpdate(subnetMeta *k8sv1alpha1.SubnetMeta) (*ipam.Subnet,
 	return subnetAdd, nil
 }
 
-func compareSubnetMetaAPIESubnet(subnetMeta *k8sv1alpha1.SubnetMeta, apiSubnet *ipam.IPAM, u uniReconciler) bool {
+func compareSubnetMetaAPIESubnet(subnetMeta *k8sv1alpha1.SubnetMeta, apiSubnet *ipam.IPAM, logger logr.InfoLogger) bool {
 	if apiSubnet.Name != subnetMeta.Spec.SubnetName {
-		u.DebugLogger.Info("Name changed", "netrisValue", apiSubnet.Name, "k8sValue", subnetMeta.Spec.SubnetName)
+		logger.Info("Name changed", "netrisValue", apiSubnet.Name, "k8sValue", subnetMeta.Spec.SubnetName)
 		return false
 	}
 
 	if apiSubnet.Prefix != subnetMeta.Spec.Prefix {
-		u.DebugLogger.Info("Prefix changed", "netrisValue", apiSubnet.Prefix, "k8sValue", subnetMeta.Spec.Prefix)
+		logger.Info("Prefix changed", "netrisValue", apiSubnet.Prefix, "k8sValue", subnetMeta.Spec.Prefix)
 		return false
 	}
 
 	if apiSubnet.Purpose != subnetMeta.Spec.Purpose {
-		u.DebugLogger.Info("Purpose changed", "netrisValue", apiSubnet.Purpose, "k8sValue", subnetMeta.Spec.Purpose)
+		logger.Info("Purpose changed", "netrisValue", apiSubnet.Purpose, "k8sValue", subnetMeta.Spec.Purpose)
 		return false
 	}
 
 	if apiSubnet.DefaultGateway != subnetMeta.Spec.DefaultGateway {
-		u.DebugLogger.Info("DefaultGateway changed", "netrisValue", apiSubnet.DefaultGateway, "k8sValue", subnetMeta.Spec.DefaultGateway)
+		logger.Info("DefaultGateway changed", "netrisValue", apiSubnet.DefaultGateway, "k8sValue", subnetMeta.Spec.DefaultGateway)
 		return false
 	}
 
 	if ok := compareSubnetMetaSiteAPISubnetSite(subnetMeta.Spec.Sites, apiSubnet.Sites); !ok {
-		u.DebugLogger.Info("Sites changed", "netrisValue", apiSubnet.Sites, "k8sValue", subnetMeta.Spec.Sites)
+		logger.Info("Sites changed", "netrisValue", apiSubnet.Sites, "k8sValue", subnetMeta.Spec.Sites)
 		return false
 	}
 

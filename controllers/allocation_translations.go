@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"github.com/go-logr/logr"
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netriswebapi/v2/types/ipam"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -114,13 +115,13 @@ func AllocationMetaToNetrisUpdate(allocationMeta *k8sv1alpha1.AllocationMeta) (*
 	return allocationAdd, nil
 }
 
-func compareAllocationMetaAPIEAllocation(allocationMeta *k8sv1alpha1.AllocationMeta, apiAllocation *ipam.IPAM, u uniReconciler) bool {
+func compareAllocationMetaAPIEAllocation(allocationMeta *k8sv1alpha1.AllocationMeta, apiAllocation *ipam.IPAM, logger logr.InfoLogger) bool {
 	if apiAllocation.Name != allocationMeta.Spec.AllocationName {
-		u.DebugLogger.Info("Name changed", "netrisValue", apiAllocation.Name, "k8sValue", allocationMeta.Spec.AllocationName)
+		logger.Info("Name changed", "netrisValue", apiAllocation.Name, "k8sValue", allocationMeta.Spec.AllocationName)
 		return false
 	}
 	if apiAllocation.Prefix != allocationMeta.Spec.Prefix {
-		u.DebugLogger.Info("Prefix changed", "netrisValue", apiAllocation.Name, "k8sValue", allocationMeta.Spec.AllocationName)
+		logger.Info("Prefix changed", "netrisValue", apiAllocation.Name, "k8sValue", allocationMeta.Spec.AllocationName)
 		return false
 	}
 

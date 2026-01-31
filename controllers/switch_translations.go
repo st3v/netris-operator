@@ -19,6 +19,7 @@ package controllers
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netriswebapi/v2/types/inventory"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -214,59 +215,59 @@ func SwitchMetaToNetrisUpdate(switchMeta *k8sv1alpha1.SwitchMeta) (*inventory.HW
 	return switchUpdate, nil
 }
 
-func compareSwitchMetaAPIESwitch(switchMeta *k8sv1alpha1.SwitchMeta, apiSwitch *inventory.HW, u uniReconciler) bool {
+func compareSwitchMetaAPIESwitch(switchMeta *k8sv1alpha1.SwitchMeta, apiSwitch *inventory.HW, logger logr.InfoLogger) bool {
 	if apiSwitch.Name != switchMeta.Spec.SwitchName {
-		u.DebugLogger.Info("Name changed", "netrisValue", apiSwitch.Name, "k8sValue", switchMeta.Spec.SwitchName)
+		logger.Info("Name changed", "netrisValue", apiSwitch.Name, "k8sValue", switchMeta.Spec.SwitchName)
 		return false
 	}
 
 	if apiSwitch.Description != switchMeta.Spec.Description {
-		u.DebugLogger.Info("Description changed", "netrisValue", apiSwitch.Description, "k8sValue", switchMeta.Spec.Description)
+		logger.Info("Description changed", "netrisValue", apiSwitch.Description, "k8sValue", switchMeta.Spec.Description)
 		return false
 	}
 
 	if apiSwitch.Tenant.ID != switchMeta.Spec.TenantID {
-		u.DebugLogger.Info("Tenant changed", "netrisValue", apiSwitch.Tenant.ID, "k8sValue", switchMeta.Spec.TenantID)
+		logger.Info("Tenant changed", "netrisValue", apiSwitch.Tenant.ID, "k8sValue", switchMeta.Spec.TenantID)
 		return false
 	}
 
 	if apiSwitch.Site.ID != switchMeta.Spec.SiteID {
-		u.DebugLogger.Info("Site changed", "netrisValue", apiSwitch.Site.ID, "k8sValue", switchMeta.Spec.SiteID)
+		logger.Info("Site changed", "netrisValue", apiSwitch.Site.ID, "k8sValue", switchMeta.Spec.SiteID)
 		return false
 	}
 
 	if apiSwitch.Nos.Tag != switchMeta.Spec.NOS.Tag {
-		u.DebugLogger.Info("NOS changed", "netrisValue", apiSwitch.Nos.Tag, "k8sValue", switchMeta.Spec.NOS.Tag)
+		logger.Info("NOS changed", "netrisValue", apiSwitch.Nos.Tag, "k8sValue", switchMeta.Spec.NOS.Tag)
 		return false
 	}
 
 	if apiSwitch.Asn != switchMeta.Spec.ASN {
-		u.DebugLogger.Info("ASN changed", "netrisValue", apiSwitch.Asn, "k8sValue", switchMeta.Spec.ASN)
+		logger.Info("ASN changed", "netrisValue", apiSwitch.Asn, "k8sValue", switchMeta.Spec.ASN)
 		return false
 	}
 
 	if apiSwitch.PortCount != switchMeta.Spec.PortsCount {
-		u.DebugLogger.Info("Ports Count changed", "netrisValue", apiSwitch.PortCount, "k8sValue", switchMeta.Spec.PortsCount)
+		logger.Info("Ports Count changed", "netrisValue", apiSwitch.PortCount, "k8sValue", switchMeta.Spec.PortsCount)
 		return false
 	}
 
 	if apiSwitch.MacAddress != switchMeta.Spec.MacAddress {
-		u.DebugLogger.Info("MAC Address Count changed", "netrisValue", apiSwitch.MacAddress, "k8sValue", switchMeta.Spec.MacAddress)
+		logger.Info("MAC Address Count changed", "netrisValue", apiSwitch.MacAddress, "k8sValue", switchMeta.Spec.MacAddress)
 		return false
 	}
 
 	if apiSwitch.Profile.ID != switchMeta.Spec.ProfileID {
-		u.DebugLogger.Info("Profile changed", "netrisValue", apiSwitch.Profile.ID, "k8sValue", switchMeta.Spec.ProfileID)
+		logger.Info("Profile changed", "netrisValue", apiSwitch.Profile.ID, "k8sValue", switchMeta.Spec.ProfileID)
 		return false
 	}
 
 	if apiSwitch.MainIP.Address != switchMeta.Spec.MainIP {
-		u.DebugLogger.Info("MainIP changed", "netrisValue", apiSwitch.MainIP.Address, "k8sValue", switchMeta.Spec.MainIP)
+		logger.Info("MainIP changed", "netrisValue", apiSwitch.MainIP.Address, "k8sValue", switchMeta.Spec.MainIP)
 		return false
 	}
 
 	if apiSwitch.MgmtIP.Address != switchMeta.Spec.MgmtIP {
-		u.DebugLogger.Info("MgmtIP changed", "netrisValue", apiSwitch.MgmtIP.Address, "k8sValue", switchMeta.Spec.MgmtIP)
+		logger.Info("MgmtIP changed", "netrisValue", apiSwitch.MgmtIP.Address, "k8sValue", switchMeta.Spec.MgmtIP)
 		return false
 	}
 

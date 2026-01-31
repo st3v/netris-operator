@@ -19,6 +19,7 @@ package controllers
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netriswebapi/v2/types/inventory"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -180,39 +181,39 @@ func SoftgateMetaToNetrisUpdate(softgateMeta *k8sv1alpha1.SoftgateMeta) (*invent
 	return softgateUpdate, nil
 }
 
-func compareSoftgateMetaAPIESoftgate(softgateMeta *k8sv1alpha1.SoftgateMeta, apiSoftgate *inventory.HW, u uniReconciler) bool {
+func compareSoftgateMetaAPIESoftgate(softgateMeta *k8sv1alpha1.SoftgateMeta, apiSoftgate *inventory.HW, logger logr.InfoLogger) bool {
 	if apiSoftgate.Name != softgateMeta.Spec.SoftgateName {
-		u.DebugLogger.Info("Name changed", "netrisValue", apiSoftgate.Name, "k8sValue", softgateMeta.Spec.SoftgateName)
+		logger.Info("Name changed", "netrisValue", apiSoftgate.Name, "k8sValue", softgateMeta.Spec.SoftgateName)
 		return false
 	}
 
 	if apiSoftgate.Description != softgateMeta.Spec.Description {
-		u.DebugLogger.Info("Description changed", "netrisValue", apiSoftgate.Description, "k8sValue", softgateMeta.Spec.Description)
+		logger.Info("Description changed", "netrisValue", apiSoftgate.Description, "k8sValue", softgateMeta.Spec.Description)
 		return false
 	}
 
 	if apiSoftgate.Tenant.ID != softgateMeta.Spec.TenantID {
-		u.DebugLogger.Info("Tenant changed", "netrisValue", apiSoftgate.Tenant.ID, "k8sValue", softgateMeta.Spec.TenantID)
+		logger.Info("Tenant changed", "netrisValue", apiSoftgate.Tenant.ID, "k8sValue", softgateMeta.Spec.TenantID)
 		return false
 	}
 
 	if apiSoftgate.Site.ID != softgateMeta.Spec.SiteID {
-		u.DebugLogger.Info("Site changed", "netrisValue", apiSoftgate.Site.ID, "k8sValue", softgateMeta.Spec.SiteID)
+		logger.Info("Site changed", "netrisValue", apiSoftgate.Site.ID, "k8sValue", softgateMeta.Spec.SiteID)
 		return false
 	}
 
 	if apiSoftgate.Profile.ID != softgateMeta.Spec.ProfileID {
-		u.DebugLogger.Info("Profile changed", "netrisValue", apiSoftgate.Profile.ID, "k8sValue", softgateMeta.Spec.ProfileID)
+		logger.Info("Profile changed", "netrisValue", apiSoftgate.Profile.ID, "k8sValue", softgateMeta.Spec.ProfileID)
 		return false
 	}
 
 	if apiSoftgate.MainIP.Address != softgateMeta.Spec.MainIP {
-		u.DebugLogger.Info("MainIP changed", "netrisValue", apiSoftgate.MainIP.Address, "k8sValue", softgateMeta.Spec.MainIP)
+		logger.Info("MainIP changed", "netrisValue", apiSoftgate.MainIP.Address, "k8sValue", softgateMeta.Spec.MainIP)
 		return false
 	}
 
 	if apiSoftgate.MgmtIP.Address != softgateMeta.Spec.MgmtIP {
-		u.DebugLogger.Info("MgmtIP changed", "netrisValue", apiSoftgate.MgmtIP.Address, "k8sValue", softgateMeta.Spec.MgmtIP)
+		logger.Info("MgmtIP changed", "netrisValue", apiSoftgate.MgmtIP.Address, "k8sValue", softgateMeta.Spec.MgmtIP)
 		return false
 	}
 

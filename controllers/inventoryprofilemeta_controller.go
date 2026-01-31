@@ -133,7 +133,7 @@ func (r *InventoryProfileMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Resul
 		if apiInventoryProfile, ok := r.NStorage.InventoryProfileStorage.FindByID(inventoryProfileMeta.Spec.ID); ok {
 
 			debugLogger.Info("Comparing InventoryProfileMeta with Netris InventoryProfile")
-			if ok := compareInventoryProfileMetaAPIEInventoryProfile(inventoryProfileMeta, apiInventoryProfile, u); ok {
+			if ok := compareInventoryProfileMetaAPIEInventoryProfile(inventoryProfileMeta, apiInventoryProfile, u.DebugLogger); ok {
 				debugLogger.Info("Nothing Changed")
 			} else {
 				debugLogger.Info("Go to update InventoryProfile in Netris")

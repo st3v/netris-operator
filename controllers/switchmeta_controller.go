@@ -147,7 +147,7 @@ func (r *SwitchMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 				switchMeta.Spec.ASN = apiSwitch.Asn
 			}
 
-			if ok := compareSwitchMetaAPIESwitch(switchMeta, apiSwitch, u); ok {
+			if ok := compareSwitchMetaAPIESwitch(switchMeta, apiSwitch, u.DebugLogger); ok {
 				debugLogger.Info("Nothing Changed")
 			} else {
 				debugLogger.Info("Go to update Switch in Netris")

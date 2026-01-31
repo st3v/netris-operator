@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"github.com/go-logr/logr"
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netriswebapi/v2/types/site"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -133,33 +134,33 @@ func SiteMetaToNetrisUpdate(siteMeta *k8sv1alpha1.SiteMeta) (*site.Site, error) 
 	return siteAdd, nil
 }
 
-func compareSiteMetaAPIESite(siteMeta *k8sv1alpha1.SiteMeta, apiSite *site.Site, u uniReconciler) bool {
+func compareSiteMetaAPIESite(siteMeta *k8sv1alpha1.SiteMeta, apiSite *site.Site, logger logr.InfoLogger) bool {
 	if apiSite.Name != siteMeta.Spec.SiteName {
-		u.DebugLogger.Info("Name changed", "netrisValue", apiSite.Name, "k8sValue", siteMeta.Spec.SiteName)
+		logger.Info("Name changed", "netrisValue", apiSite.Name, "k8sValue", siteMeta.Spec.SiteName)
 		return false
 	}
 	if apiSite.PublicAsn != siteMeta.Spec.PublicASN {
-		u.DebugLogger.Info("PublicASN changed", "netrisValue", apiSite.PublicAsn, "k8sValue", siteMeta.Spec.PublicASN)
+		logger.Info("PublicASN changed", "netrisValue", apiSite.PublicAsn, "k8sValue", siteMeta.Spec.PublicASN)
 		return false
 	}
 	if apiSite.RohAsn != siteMeta.Spec.RohASN {
-		u.DebugLogger.Info("RohASN changed", "netrisValue", apiSite.RohProfile.ID, "k8sValue", siteMeta.Spec.RohASN)
+		logger.Info("RohASN changed", "netrisValue", apiSite.RohProfile.ID, "k8sValue", siteMeta.Spec.RohASN)
 		return false
 	}
 	if apiSite.VMAsn != siteMeta.Spec.VMASN {
-		u.DebugLogger.Info("VMASN changed", "netrisValue", apiSite.VMAsn, "k8sValue", siteMeta.Spec.VMASN)
+		logger.Info("VMASN changed", "netrisValue", apiSite.VMAsn, "k8sValue", siteMeta.Spec.VMASN)
 		return false
 	}
 	if apiSite.RohProfile.ID != siteMeta.Spec.RohRoutingProfileID {
-		u.DebugLogger.Info("RoutingProfile changed", "netrisValue", apiSite.RohProfile.ID, "k8sValue", siteMeta.Spec.RohRoutingProfileID)
+		logger.Info("RoutingProfile changed", "netrisValue", apiSite.RohProfile.ID, "k8sValue", siteMeta.Spec.RohRoutingProfileID)
 		return false
 	}
 	if apiSite.SiteMesh.Value != siteMeta.Spec.SiteMesh {
-		u.DebugLogger.Info("SiteMesh changed", "netrisValue", apiSite.SiteMesh.Value, "k8sValue", siteMeta.Spec.SiteMesh)
+		logger.Info("SiteMesh changed", "netrisValue", apiSite.SiteMesh.Value, "k8sValue", siteMeta.Spec.SiteMesh)
 		return false
 	}
 	if apiSite.AclPolicy != siteMeta.Spec.ACLDefaultPolicy {
-		u.DebugLogger.Info("ACLDefaultPolicy changed", "netrisValue", apiSite.AclPolicy, "k8sValue", siteMeta.Spec.ACLDefaultPolicy)
+		logger.Info("ACLDefaultPolicy changed", "netrisValue", apiSite.AclPolicy, "k8sValue", siteMeta.Spec.ACLDefaultPolicy)
 		return false
 	}
 

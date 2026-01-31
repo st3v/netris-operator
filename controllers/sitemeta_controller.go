@@ -162,7 +162,7 @@ func (r *SiteMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if apiSite, ok := r.NStorage.SitesStorage.FindByID(siteMeta.Spec.ID); ok {
 
 			debugLogger.Info("Comparing SiteMeta with Netris Site")
-			if ok := compareSiteMetaAPIESite(siteMeta, apiSite, u); ok {
+			if ok := compareSiteMetaAPIESite(siteMeta, apiSite, u.DebugLogger); ok {
 				debugLogger.Info("Nothing Changed")
 			} else {
 				debugLogger.Info("Go to update Site in Netris")

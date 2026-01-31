@@ -399,10 +399,7 @@ func TestCompareSubnetMetaAPIESubnet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u := uniReconciler{
-				DebugLogger: newTestLogger(),
-			}
-			result := compareSubnetMetaAPIESubnet(tt.subnetMeta, tt.apiSubnet, u)
+			result := compareSubnetMetaAPIESubnet(tt.subnetMeta, tt.apiSubnet, newTestLogger())
 			if result != tt.expected {
 				t.Errorf("got %v, expected %v", result, tt.expected)
 			}

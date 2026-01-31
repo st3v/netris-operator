@@ -708,11 +708,7 @@ func TestCompareBGPMetaAPIEBGP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u := uniReconciler{
-				DebugLogger: newTestLogger(),
-				NStorage:    newTestStorage(nil),
-			}
-			got := compareBGPMetaAPIEBGP(tt.bgpMeta, tt.apiBGP, u)
+			got := compareBGPMetaAPIEBGP(tt.bgpMeta, tt.apiBGP, newTestStorage(nil), newTestLogger())
 			if got != tt.wantMatch {
 				t.Errorf("got %v, want %v", got, tt.wantMatch)
 			}

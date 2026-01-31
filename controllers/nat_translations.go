@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netriswebapi/v2/types/nat"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -162,21 +163,21 @@ func NatMetaToNetrisUpdate(natMeta *k8sv1alpha1.NatMeta) (*nat.NATw, error) {
 	return natAdd, nil
 }
 
-func compareNatMetaAPIENat(natMeta *k8sv1alpha1.NatMeta, apiNat *nat.NAT, u uniReconciler) bool {
+func compareNatMetaAPIENat(natMeta *k8sv1alpha1.NatMeta, apiNat *nat.NAT, logger logr.InfoLogger) bool {
 	if apiNat.Name != natMeta.Spec.NatName {
-		u.DebugLogger.Info("Name changed", "netrisValue", apiNat.Name, "k8sValue", natMeta.Spec.NatName)
+		logger.Info("Name changed", "netrisValue", apiNat.Name, "k8sValue", natMeta.Spec.NatName)
 		return false
 	}
 	if apiNat.Comment != natMeta.Spec.Comment {
-		u.DebugLogger.Info("Comment changed", "netrisValue", apiNat.Comment, "k8sValue", natMeta.Spec.Comment)
+		logger.Info("Comment changed", "netrisValue", apiNat.Comment, "k8sValue", natMeta.Spec.Comment)
 		return false
 	}
 	if apiNat.State.Value != natMeta.Spec.State {
-		u.DebugLogger.Info("State changed", "netrisValue", apiNat.State.Value, "k8sValue", natMeta.Spec.State)
+		logger.Info("State changed", "netrisValue", apiNat.State.Value, "k8sValue", natMeta.Spec.State)
 		return false
 	}
 	if apiNat.Site.ID != natMeta.Spec.SiteID {
-		u.DebugLogger.Info("Sote changed", "netrisValue", apiNat.Site.ID, "k8sValue", natMeta.Spec.SiteID)
+		logger.Info("Sote changed", "netrisValue", apiNat.Site.ID, "k8sValue", natMeta.Spec.SiteID)
 		return false
 	}
 	apiAction := apiNat.Action.Label
@@ -184,46 +185,46 @@ func compareNatMetaAPIENat(natMeta *k8sv1alpha1.NatMeta, apiNat *nat.NAT, u uniR
 		apiAction = "ACCEPT_SNAT"
 	}
 	if apiAction != natMeta.Spec.Action {
-		u.DebugLogger.Info("Action changed", "netrisValue", apiNat.Action.Label, "k8sValue", natMeta.Spec.Action)
+		logger.Info("Action changed", "netrisValue", apiNat.Action.Label, "k8sValue", natMeta.Spec.Action)
 		return false
 	}
 	if apiNat.Protocol.Value != natMeta.Spec.Protocol {
-		u.DebugLogger.Info("Protocol changed", "netrisValue", apiNat.Protocol.Value, "k8sValue", natMeta.Spec.Protocol)
+		logger.Info("Protocol changed", "netrisValue", apiNat.Protocol.Value, "k8sValue", natMeta.Spec.Protocol)
 		return false
 	}
 	if apiNat.SourceAddress != natMeta.Spec.SrcAddress {
-		u.DebugLogger.Info("SourceAddress changed", "netrisValue", apiNat.SourceAddress, "k8sValue", natMeta.Spec.SrcAddress)
+		logger.Info("SourceAddress changed", "netrisValue", apiNat.SourceAddress, "k8sValue", natMeta.Spec.SrcAddress)
 		return false
 	}
 	if (apiNat.Protocol.Value == "tcp" || apiNat.Protocol.Value == "udp") && apiNat.SourcePort != natMeta.Spec.SrcPort {
-		u.DebugLogger.Info("SourcePort changed", "netrisValue", apiNat.SourcePort, "k8sValue", natMeta.Spec.SrcPort)
+		logger.Info("SourcePort changed", "netrisValue", apiNat.SourcePort, "k8sValue", natMeta.Spec.SrcPort)
 		return false
 	}
 	if apiNat.DestinationAddress != natMeta.Spec.DstAddress {
 		natMetaDst := strings.Split(natMeta.Spec.DstAddress, "/")[0]
 		if apiNat.DestinationAddress != natMetaDst {
-			u.DebugLogger.Info("DestinationAddress changed", "netrisValue", apiNat.DestinationAddress, "k8sValue", natMeta.Spec.DstAddress)
+			logger.Info("DestinationAddress changed", "netrisValue", apiNat.DestinationAddress, "k8sValue", natMeta.Spec.DstAddress)
 			return false
 		}
 	}
 	if (apiNat.Protocol.Value == "tcp" || apiNat.Protocol.Value == "udp") && apiNat.DestinationPort != natMeta.Spec.DstPort {
-		u.DebugLogger.Info("DestinationPort changed", "netrisValue", apiNat.DestinationPort, "k8sValue", natMeta.Spec.DstPort)
+		logger.Info("DestinationPort changed", "netrisValue", apiNat.DestinationPort, "k8sValue", natMeta.Spec.DstPort)
 		return false
 	}
 	if apiNat.SnatToIP != natMeta.Spec.SnatToIP {
-		u.DebugLogger.Info("SnatToIP changed", "netrisValue", apiNat.SnatToIP, "k8sValue", natMeta.Spec.SnatToIP)
+		logger.Info("SnatToIP changed", "netrisValue", apiNat.SnatToIP, "k8sValue", natMeta.Spec.SnatToIP)
 		return false
 	}
 	if apiNat.SnatToPool != natMeta.Spec.SnatToPool {
-		u.DebugLogger.Info("SnatToPool changed", "netrisValue", apiNat.SnatToPool, "k8sValue", natMeta.Spec.SnatToPool)
+		logger.Info("SnatToPool changed", "netrisValue", apiNat.SnatToPool, "k8sValue", natMeta.Spec.SnatToPool)
 		return false
 	}
 	if apiNat.DnatToIP != natMeta.Spec.DnatToIP {
-		u.DebugLogger.Info("DnatToIP changed", "netrisValue", apiNat.DnatToIP, "k8sValue", natMeta.Spec.DnatToIP)
+		logger.Info("DnatToIP changed", "netrisValue", apiNat.DnatToIP, "k8sValue", natMeta.Spec.DnatToIP)
 		return false
 	}
 	if apiNat.DnatToPort != natMeta.Spec.DnatToPort {
-		u.DebugLogger.Info("DnatToPort changed", "netrisValue", apiNat.DnatToPort, "k8sValue", natMeta.Spec.DnatToPort)
+		logger.Info("DnatToPort changed", "netrisValue", apiNat.DnatToPort, "k8sValue", natMeta.Spec.DnatToPort)
 		return false
 	}
 
