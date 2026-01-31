@@ -22,16 +22,15 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
-func getPodsByLabelSeector(clientset *kubernetes.Clientset, namespace, selectors string) (*v1.PodList, error) {
+func getPodsByLabelSelector(k8sClient K8sClient, namespace, selectors string) (*v1.PodList, error) {
 	ctx, cancel := context.WithTimeout(cntxt, contextTimeout)
 	defer cancel()
 	listOptions := metav1.ListOptions{
 		LabelSelector: selectors,
 	}
-	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, listOptions)
+	pods, err := k8sClient.ListPods(ctx, namespace, listOptions)
 	if err != nil {
 		return pods, fmt.Errorf("{getPods} %s", err)
 	}

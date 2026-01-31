@@ -32,17 +32,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func getServices(clientset *kubernetes.Clientset, namespace string) (*v1.ServiceList, error) {
+func getServices(k8sClient K8sClient, namespace string) (*v1.ServiceList, error) {
 	ctx, cancel := context.WithTimeout(cntxt, contextTimeout)
 	defer cancel()
-	services, err := clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
+	services, err := k8sClient.ListServices(ctx, namespace, metav1.ListOptions{})
 	if err != nil {
 		return services, fmt.Errorf("{getServices} %s", err)
 	}
 	return services, nil
 }
 
-func assignIngress(clientset *kubernetes.Clientset, ips []string, namespace string, name string) (*v1.Service, error) {
+func assignIngress(k8sClient K8sClient, ips []string, namespace string, name string) (*v1.Service, error) {
 	ctx, cancel := context.WithTimeout(cntxt, contextTimeout)
 	defer cancel()
 
@@ -54,14 +54,14 @@ func assignIngress(clientset *kubernetes.Clientset, ips []string, namespace stri
 
 	var updatedService *v1.Service
 
-	service, err := clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+	service, err := k8sClient.GetService(ctx, namespace, name, metav1.GetOptions{})
 	if err != nil {
 		return updatedService, err
 	}
 
 	service.Status = v1.ServiceStatus{LoadBalancer: v1.LoadBalancerStatus{Ingress: ingressList}}
 
-	updatedService, updateErr := clientset.CoreV1().Services(namespace).UpdateStatus(context.TODO(), service, metav1.UpdateOptions{})
+	updatedService, updateErr := k8sClient.UpdateServiceStatus(context.TODO(), namespace, service, metav1.UpdateOptions{})
 
 	return updatedService, updateErr
 }
@@ -83,10 +83,10 @@ func eventRecorder(kubeClient *kubernetes.Clientset) (record.EventRecorder, watc
 	return recorder, w, eventBroadcaster
 }
 
-func createEvent(clientset *kubernetes.Clientset, recorder record.EventRecorder, namespace, name, reason, message string) error {
+func createEvent(k8sClient K8sClient, recorder record.EventRecorder, namespace, name, reason, message string) error {
 	ctx, cancel := context.WithTimeout(cntxt, contextTimeout)
 	defer cancel()
-	service, err := clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+	service, err := k8sClient.GetService(ctx, namespace, name, metav1.GetOptions{})
 	if err != nil {
 		if client.IgnoreNotFound(err) != nil {
 			return fmt.Errorf("{createEvent GetService} %s", err)

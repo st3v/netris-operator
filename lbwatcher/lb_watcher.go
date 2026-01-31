@@ -59,8 +59,8 @@ func NewWatcher(nStorage *netrisstorage.Storage, mgr manager.Manager, options Op
 	return watcher, nil
 }
 
-func (w *Watcher) start(clientset *kubernetes.Clientset, cl client.Client, recorder record.EventRecorder) {
-	w.loadBalancerProcess(clientset, cl, recorder)
+func (w *Watcher) start(k8sClient K8sClient, cl client.Client, recorder record.EventRecorder) {
+	w.loadBalancerProcess(k8sClient, cl, recorder)
 }
 
 // Start .
@@ -83,14 +83,15 @@ func (w *Watcher) Start() {
 	if err != nil {
 		logger.Error(err, "")
 	}
+	k8sClient := NewK8sClient(clientset)
 	cl := w.MGR.GetClient()
 	recorder, _, _ := eventRecorder(clientset)
 
 	ticker := time.NewTicker(requeueInterval)
-	w.start(clientset, cl, recorder)
+	w.start(k8sClient, cl, recorder)
 	for {
 		<-ticker.C
-		w.start(clientset, cl, recorder)
+		w.start(k8sClient, cl, recorder)
 	}
 }
 
@@ -108,7 +109,7 @@ func filterL4LBs(LBs []k8sv1alpha1.L4LB) []k8sv1alpha1.L4LB {
 	return lbList
 }
 
-func (w *Watcher) loadBalancerProcess(clientset *kubernetes.Clientset, cl client.Client, recorder record.EventRecorder) {
+func (w *Watcher) loadBalancerProcess(k8sClient K8sClient, cl client.Client, recorder record.EventRecorder) {
 	debugLogger.Info("Generating load balancers from k8s...")
 	var errors []error = nil
 	lbTimeout := "2000"
@@ -132,7 +133,7 @@ func (w *Watcher) loadBalancerProcess(clientset *kubernetes.Clientset, cl client
 		}
 	}
 
-	serviceLBs, err := w.generateLoadBalancers(clientset, ipAuto, lbTimeout)
+	serviceLBs, err := w.generateLoadBalancers(k8sClient, ipAuto, lbTimeout)
 	if err != nil {
 		logger.Error(err, "")
 		return
@@ -170,7 +171,7 @@ func (w *Watcher) loadBalancerProcess(clientset *kubernetes.Clientset, cl client
 			for ip := range ingress {
 				ingressIPs = append(ingressIPs, ip)
 			}
-			_, err := assignIngress(clientset, ingressIPs, serviceLB.GetServiceNamespace(), serviceLB.GetServiceName())
+			_, err := assignIngress(k8sClient, ingressIPs, serviceLB.GetServiceNamespace(), serviceLB.GetServiceName())
 			if err != nil {
 				errors = append(errors, err)
 			}
@@ -179,7 +180,7 @@ func (w *Watcher) loadBalancerProcess(clientset *kubernetes.Clientset, cl client
 
 	for _, lb := range l4lbs.Items {
 		if lb.Status.Status == "Failure" {
-			err := createEvent(clientset, recorder, lb.GetServiceNamespace(), lb.GetServiceName(), lb.Status.Status, lb.Status.Message)
+			err := createEvent(k8sClient, recorder, lb.GetServiceNamespace(), lb.GetServiceName(), lb.Status.Status, lb.Status.Message)
 			if err != nil {
 				errors = append(errors, fmt.Errorf("{lbEventsPatcher} %s", err))
 			}
@@ -358,9 +359,9 @@ func getL4LBs(cl client.Client) (*k8sv1alpha1.L4LBList, error) {
 	return l4lb, nil
 }
 
-func (w *Watcher) generateLoadBalancers(clientset *kubernetes.Clientset, autoIPs map[string]string, lbTimeout string) ([]*k8sv1alpha1.L4LB, error) {
+func (w *Watcher) generateLoadBalancers(k8sClient K8sClient, autoIPs map[string]string, lbTimeout string) ([]*k8sv1alpha1.L4LB, error) {
 	lbList := []*k8sv1alpha1.L4LB{}
-	serviceList, err := getServices(clientset, "")
+	serviceList, err := getServices(k8sClient, "")
 	if err != nil {
 		return lbList, fmt.Errorf("{generateLoadBalancers} %s", err)
 	}
@@ -381,7 +382,7 @@ func (w *Watcher) generateLoadBalancers(clientset *kubernetes.Clientset, autoIPs
 			}
 
 			debugLogger.Info("Getting k8s pods...", "service", svc.Name, "namespace", svc.Namespace)
-			podList, err := getPodsByLabelSeector(clientset, svc.Namespace, strings.Join(selectors, ","))
+			podList, err := getPodsByLabelSelector(k8sClient, svc.Namespace, strings.Join(selectors, ","))
 			if err != nil {
 				return lbList, fmt.Errorf("{generateLoadBalancers} %s", err)
 			}

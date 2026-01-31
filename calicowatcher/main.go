@@ -55,15 +55,15 @@ var (
 
 // Watcher is the main structure in order to manage calicowatcher
 type Watcher struct {
-	Options    Options
-	NStorage   *netrisstorage.Storage
-	MGR        manager.Manager
-	Calico     *calico.Calico
-	restClient *rest.Config
-	client     client.Client
-	clientset  *kubernetes.Clientset
-	data       data
-	stop       chan struct{}
+	Options      Options
+	NStorage     *netrisstorage.Storage
+	MGR          manager.Manager
+	calicoClient CalicoClient
+	restClient   *rest.Config
+	client       client.Client
+	k8sClient    K8sClient
+	data         data
+	stop         chan struct{}
 }
 
 type data struct {
@@ -104,7 +104,6 @@ func NewWatcher(nStorage *netrisstorage.Storage, mgr manager.Manager, options Op
 		NStorage: nStorage,
 		MGR:      mgr,
 		Options:  options,
-		Calico:   calico.New(calico.Options{ContextTimeout: options.RequeueInterval}),
 		stop:     make(chan struct{}),
 	}
 	return watcher, nil
@@ -122,7 +121,8 @@ func (w *Watcher) start() {
 		logger.Error(err, "")
 		return
 	}
-	w.clientset = clientset
+	w.k8sClient = NewK8sClient(clientset)
+	w.calicoClient = NewCalicoClient(calico.New(calico.Options{ContextTimeout: w.Options.RequeueInterval}))
 	// recorder, w, _ := eventRecorder(clientset)
 	// defer w.Stop()
 	w.data = data{}
@@ -230,17 +230,17 @@ func (w *Watcher) process() error {
 	}
 
 	debugLogger.Info("Getting netris-controller peer", "deleteMode", w.data.deleteMode)
-	netrisPeer, err := w.Calico.GetBGPPeer("netris-controller", w.restClient)
+	netrisPeer, err := w.calicoClient.GetBGPPeer("netris-controller", w.restClient)
 	if err != nil {
 		return err
 	}
 
 	debugLogger.Info("Generating netris-controller peer", "deleteMode", w.data.deleteMode)
-	peer := w.Calico.GenerateBGPPeer("netris-controller", "", w.data.vnetGWIP, w.data.site.PublicAsn)
+	peer := w.calicoClient.GenerateBGPPeer("netris-controller", "", w.data.vnetGWIP, w.data.site.PublicAsn)
 
 	if netrisPeer == nil {
 		debugLogger.Info("Creating netris-controller peer", "deleteMode", w.data.deleteMode)
-		if err := w.Calico.CreateBGPPeer(peer, w.restClient); err != nil {
+		if err := w.calicoClient.CreateBGPPeer(peer, w.restClient); err != nil {
 			return err
 		}
 		logger.Info("netris-controller peer created", "deleteMode", w.data.deleteMode)
@@ -249,7 +249,7 @@ func (w *Watcher) process() error {
 		if len(changelog) > 0 {
 			debugLogger.Info("Updating netris-controller peer", "deleteMode", w.data.deleteMode)
 			netrisPeer.Spec = peer.Spec
-			if err := w.Calico.UpdateBGPPeer(netrisPeer, w.restClient); err != nil {
+			if err := w.calicoClient.UpdateBGPPeer(netrisPeer, w.restClient); err != nil {
 				return err
 			}
 			logger.Info("netris-controller peer updated", "deleteMode", w.data.deleteMode)
@@ -320,7 +320,7 @@ func (w *Watcher) deleteNodesASNs() error {
 					Value: asn,
 				}}
 				payloadBytes, _ := json.Marshal(payload)
-				_, err := w.clientset.CoreV1().Nodes().Patch(ctx, node.Name, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+				_, err := w.k8sClient.PatchNode(ctx, node.Name, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
 				if err != nil {
 					return err
 				}
@@ -372,14 +372,14 @@ func (w *Watcher) deleteProcess() error {
 	}
 
 	debugLogger.Info("Geting netris-controller peer", "deleteMode", w.data.deleteMode)
-	netrisPeer, err := w.Calico.GetBGPPeer("netris-controller", w.restClient)
+	netrisPeer, err := w.calicoClient.GetBGPPeer("netris-controller", w.restClient)
 	if err != nil {
 		return err
 	}
 
 	if netrisPeer != nil {
 		debugLogger.Info("Deleting netris-controller peer", "deleteMode", w.data.deleteMode)
-		if err := w.Calico.DeleteBGPPeer(netrisPeer, w.restClient); err != nil {
+		if err := w.calicoClient.DeleteBGPPeer(netrisPeer, w.restClient); err != nil {
 			return err
 		}
 		logger.Info("Peers in netris-controller are deleted", "deleteMode", w.data.deleteMode)
@@ -390,7 +390,7 @@ func (w *Watcher) deleteProcess() error {
 
 func (w *Watcher) mainProcessing() error {
 	var err error
-	if w.data.bgpConfs, err = w.Calico.GetBGPConfiguration(w.restClient); err != nil {
+	if w.data.bgpConfs, err = w.calicoClient.GetBGPConfiguration(w.restClient); err != nil {
 		if calico.IsMissingResource(err) {
 			logger.Info(err.Error())
 			logger.Info("Calico CNI not detected")
@@ -424,7 +424,7 @@ func (w *Watcher) updateBGPConfMesh(enabled bool) error {
 	if len(w.data.bgpConfs) > 0 {
 		bgpConf := w.data.bgpConfs[0]
 		*bgpConf.Spec.NodeToNodeMeshEnabled = enabled
-		return w.Calico.UpdateBGPConfiguration(bgpConf, w.restClient)
+		return w.calicoClient.UpdateBGPConfiguration(bgpConf, w.restClient)
 	}
 	return fmt.Errorf("BGPConfiguration is missing in calico")
 }
@@ -605,7 +605,7 @@ func (w *Watcher) checkBGPConfigurations() bool {
 func (w *Watcher) getNodes() error {
 	ctx, cancel := context.WithTimeout(cntxt, contextTimeout)
 	defer cancel()
-	nodes, err := w.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	nodes, err := w.k8sClient.ListNodes(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -618,12 +618,12 @@ func (w *Watcher) getNodes() error {
 }
 
 func (w *Watcher) getIPPools() ([]*calico.IPPool, error) {
-	ipPools, err := w.Calico.GetIPPool(w.restClient)
+	ipPools, err := w.calicoClient.GetIPPool(w.restClient)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(ipPools) == 0 && ipPools[0] != nil {
+	if len(ipPools) == 0 || ipPools[0] == nil {
 		return nil, fmt.Errorf("IPPool is missing")
 	}
 	return ipPools, nil
@@ -677,7 +677,7 @@ func (w *Watcher) fillNodesASNs() error {
 					}}
 					payloadBytes, _ := json.Marshal(payload)
 					ctx, cancel := context.WithTimeout(cntxt, contextTimeout)
-					_, err := w.clientset.CoreV1().Nodes().Patch(ctx, node.Name, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+					_, err := w.k8sClient.PatchNode(ctx, node.Name, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
 					if err != nil {
 						cancel()
 						return err
