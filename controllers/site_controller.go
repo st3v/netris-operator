@@ -29,16 +29,15 @@ import (
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 // SiteReconciler reconciles a Site object
 type SiteReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	SiteClient SiteClient
+	NStorage   *netrisstorage.Storage
 }
 
 // +kubebuilder:rbac:groups=k8s.netris.ai,resources=sites,verbs=get;list;watch;create;update;patch;delete
@@ -55,7 +54,6 @@ func (r *SiteReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 

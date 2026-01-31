@@ -68,7 +68,7 @@ func (r *BGPReconciler) BGPToBGPMeta(bgp *k8sv1alpha1.BGP) (*k8sv1alpha1.BGPMeta
 		}
 		vlanID = -1
 	} else {
-		vnets, err := r.Cred.VNet().Get()
+		vnets, err := r.VNetClient.Get()
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +83,7 @@ func (r *BGPReconciler) BGPToBGPMeta(bgp *k8sv1alpha1.BGP) (*k8sv1alpha1.BGPMeta
 		vlanID = bgp.Spec.Transport.VlanID
 	}
 
-	inventory, err := r.Cred.Inventory().Get()
+	inventory, err := r.InventoryClient.Get()
 	if err != nil {
 		return nil, err
 	}

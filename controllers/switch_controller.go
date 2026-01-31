@@ -30,16 +30,16 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 // SwitchReconciler reconciles a Switch object
 type SwitchReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log                    logr.Logger
+	Scheme                 *runtime.Scheme
+	InventoryClient        InventoryClient
+	InventoryProfileClient InventoryProfileClient
+	NStorage               *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=switches,verbs=get;list;watch;create;update;patch;delete
@@ -64,7 +64,6 @@ func (r *SwitchReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -177,7 +176,7 @@ func (r *SwitchReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 func (r *SwitchReconciler) deleteSwitch(switchH *k8sv1alpha1.Switch, switchMeta *k8sv1alpha1.SwitchMeta) (ctrl.Result, error) {
 	if switchMeta != nil && switchMeta.Spec.ID > 0 && !switchMeta.Spec.Reclaim {
-		reply, err := r.Cred.Inventory().Delete("switch", switchMeta.Spec.ID)
+		reply, err := r.InventoryClient.Delete("switch", switchMeta.Spec.ID)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("{deleteSwitch} %s", err)
 		}

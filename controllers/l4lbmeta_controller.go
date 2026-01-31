@@ -32,18 +32,17 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 	"github.com/netrisai/netriswebapi/v2/types/l4lb"
 )
 
 // L4LBMetaReconciler reconciles a L4LBMeta object
 type L4LBMetaReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
-	VPCID    int
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	L4LBClient L4LBClient
+	NStorage   *netrisstorage.Storage
+	VPCID      int
 }
 
 // +kubebuilder:rbac:groups=k8s.netris.ai,resources=l4lbmeta,verbs=get;list;watch;create;update;patch;delete
@@ -71,7 +70,7 @@ func (r *L4LBMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	if l4lbMeta.DeletionTimestamp != nil {
 		if l4lbMeta.Spec.ID > 0 && !l4lbMeta.Spec.Reclaim {
-			reply, err := r.Cred.L4LB().Delete(l4lbMeta.Spec.ID)
+			reply, err := r.L4LBClient.Delete(l4lbMeta.Spec.ID)
 			if err != nil {
 				return ctrl.Result{}, fmt.Errorf("{deleteL4LB} %s", err)
 			}
@@ -110,7 +109,6 @@ func (r *L4LBMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -227,7 +225,7 @@ func (r *L4LBMetaReconciler) createL4LB(l4lbMeta *k8sv1alpha1.L4LBMeta) (ctrl.Re
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}
-	reply, err := r.Cred.L4LB().Add(l4lbAdd)
+	reply, err := r.L4LBClient.Add(l4lbAdd)
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}
@@ -276,7 +274,7 @@ func (r *L4LBMetaReconciler) createL4LB(l4lbMeta *k8sv1alpha1.L4LBMeta) (ctrl.Re
 }
 
 func (r *L4LBMetaReconciler) updateL4LB(id int, l4lb *l4lb.LoadBalancerUpdate) (ctrl.Result, error, error) {
-	reply, err := r.Cred.L4LB().Update(id, l4lb)
+	reply, err := r.L4LBClient.Update(id, l4lb)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("{updateL4LB} %s", err), err
 	}

@@ -30,16 +30,15 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 // SubnetReconciler reconciles a Subnet object
 type SubnetReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	IPAMClient IPAMClient
+	NStorage   *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=subnets,verbs=get;list;watch;create;update;patch;delete
@@ -61,7 +60,6 @@ func (r *SubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -174,7 +172,7 @@ func (r *SubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 func (r *SubnetReconciler) deleteSubnet(subnet *k8sv1alpha1.Subnet, subnetMeta *k8sv1alpha1.SubnetMeta) (ctrl.Result, error) {
 	if subnetMeta != nil && subnetMeta.Spec.ID > 0 && !subnetMeta.Spec.Reclaim {
-		reply, err := r.Cred.IPAM().Delete("subnet", subnetMeta.Spec.ID)
+		reply, err := r.IPAMClient.Delete("subnet", subnetMeta.Spec.ID)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("{deleteSubnet} %s", err)
 		}

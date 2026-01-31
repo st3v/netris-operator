@@ -30,16 +30,15 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 // AllocationReconciler reconciles a Allocation object
 type AllocationReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	IPAMClient IPAMClient
+	NStorage   *netrisstorage.Storage
 }
 
 // +kubebuilder:rbac:groups=k8s.netris.ai,resources=allocations,verbs=get;list;watch;create;update;patch;delete
@@ -61,7 +60,6 @@ func (r *AllocationReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -174,7 +172,7 @@ func (r *AllocationReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 
 func (r *AllocationReconciler) deleteAllocation(allocation *k8sv1alpha1.Allocation, allocationMeta *k8sv1alpha1.AllocationMeta) (ctrl.Result, error) {
 	if allocationMeta != nil && allocationMeta.Spec.ID > 0 && !allocationMeta.Spec.Reclaim {
-		reply, err := r.Cred.IPAM().Delete("allocation", allocationMeta.Spec.ID)
+		reply, err := r.IPAMClient.Delete("allocation", allocationMeta.Spec.ID)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("{deleteAllocation} %s", err)
 		}

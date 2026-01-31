@@ -53,7 +53,7 @@ func (r *SoftgateReconciler) SoftgateToSoftgateMeta(softgate *k8sv1alpha1.Softga
 	}
 
 	profileID := 0
-	profiles, err := r.Cred.InventoryProfile().Get()
+	profiles, err := r.InventoryProfileClient.Get()
 	if err != nil {
 		return nil, err
 	}

@@ -31,17 +31,16 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 	"github.com/netrisai/netriswebapi/v2/types/nat"
 )
 
 // NatMetaReconciler reconciles a NatMeta object
 type NatMetaReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log       logr.Logger
+	Scheme    *runtime.Scheme
+	NATClient NATClient
+	NStorage  *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=natmeta,verbs=get;list;watch;create;update;patch;delete
@@ -79,7 +78,6 @@ func (r *NatMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -149,7 +147,7 @@ func (r *NatMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				js, _ := json.Marshal(natUpdate)
 				debugLogger.Info("natUpdate", "payload", string(js))
 
-				_, err, errMsg := updateNat(natMeta.Spec.ID, natUpdate, r.Cred)
+				_, err, errMsg := r.updateNat(natMeta.Spec.ID, natUpdate)
 				if err != nil {
 					logger.Error(fmt.Errorf("{updateNat} %s", err), "")
 					return u.patchNatStatus(natCR, "Failure", errMsg.Error())
@@ -184,7 +182,7 @@ func (r *NatMetaReconciler) createNat(natMeta *k8sv1alpha1.NatMeta) (ctrl.Result
 	js, _ := json.Marshal(natAdd)
 	debugLogger.Info("natToAdd", "payload", string(js))
 
-	reply, err := r.Cred.NAT().Add(natAdd)
+	reply, err := r.NATClient.Add(natAdd)
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}
@@ -220,8 +218,8 @@ func (r *NatMetaReconciler) createNat(natMeta *k8sv1alpha1.NatMeta) (ctrl.Result
 	return ctrl.Result{}, nil, nil
 }
 
-func updateNat(id int, nat *nat.NATw, cred *api.Clientset) (ctrl.Result, error, error) {
-	reply, err := cred.NAT().Update(id, nat)
+func (r *NatMetaReconciler) updateNat(id int, nat *nat.NATw) (ctrl.Result, error, error) {
+	reply, err := r.NATClient.Update(id, nat)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("{updateNat} %s", err), err
 	}

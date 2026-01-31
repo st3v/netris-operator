@@ -33,16 +33,15 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 // VNetMetaReconciler reconciles a VNetMeta object
 type VNetMetaReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	VNetClient VNetClient
+	NStorage   *netrisstorage.Storage
 }
 
 // +kubebuilder:rbac:groups=k8s.netris.ai,resources=vnetmeta,verbs=get;list;watch;create;update;patch;delete
@@ -72,7 +71,6 @@ func (r *VNetMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -125,7 +123,7 @@ func (r *VNetMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 		logger.Info("VNet Created")
 	} else {
-		vnet, _ := r.Cred.VNet().GetByID(vnetMeta.Spec.ID)
+		vnet, _ := r.VNetClient.GetByID(vnetMeta.Spec.ID)
 		if vnet == nil {
 			debugLogger.Info("VNet not found in Netris")
 			debugLogger.Info("Going to create VNet")
@@ -184,7 +182,7 @@ func (r *VNetMetaReconciler) createVNet(vnetMeta *k8sv1alpha1.VNetMeta) (ctrl.Re
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}
-	reply, err := r.Cred.VNet().Add(vnetAdd)
+	reply, err := r.VNetClient.Add(vnetAdd)
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}

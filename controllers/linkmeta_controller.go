@@ -33,17 +33,16 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 	"github.com/netrisai/netriswebapi/v2/types/link"
 )
 
 // LinkMetaReconciler reconciles a LinkMeta object
 type LinkMetaReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	LinkClient LinkClient
+	NStorage   *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=linkmeta,verbs=get;list;watch;create;update;patch;delete
@@ -81,7 +80,6 @@ func (r *LinkMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -159,7 +157,7 @@ func (r *LinkMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 					Local:  link.LinkIDName{ID: oldLocal},
 					Remote: link.LinkIDName{ID: oldRemote},
 				}
-				reply, err := r.Cred.Link().Delete(linkDelete)
+				reply, err := r.LinkClient.Delete(linkDelete)
 				if err != nil {
 					return ctrl.Result{}, fmt.Errorf("{deleteLink} %s", err)
 				}
@@ -210,7 +208,7 @@ func (r *LinkMetaReconciler) createLink(linkMeta *k8sv1alpha1.LinkMeta) (ctrl.Re
 	js, _ := json.Marshal(linkAdd)
 	debugLogger.Info("linkToAdd", "payload", string(js))
 
-	reply, err := r.Cred.Link().Add(linkAdd)
+	reply, err := r.LinkClient.Add(linkAdd)
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}

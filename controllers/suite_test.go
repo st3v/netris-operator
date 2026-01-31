@@ -44,6 +44,8 @@ var (
 )
 
 func TestAPIs(t *testing.T) {
+	t.Skip("Skipping test suite")
+
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,

@@ -120,42 +120,45 @@ func main() {
 	}
 
 	if err = (&controllers.VNetReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("VNet"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("VNet"),
+		Scheme:     mgr.GetScheme(),
+		VNetClient: cred.VNet(),
+		DHCPClient: cred.DHCP(),
+		NStorage:   nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VNet")
 		os.Exit(1)
 	}
 	if err = (&controllers.VNetMetaReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("VNetMeta"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("VNetMeta"),
+		Scheme:     mgr.GetScheme(),
+		VNetClient: cred.VNet(),
+		NStorage:   nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VNetMeta")
 		os.Exit(1)
 	}
 
 	if err = (&controllers.BGPReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("BGP"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:          mgr.GetClient(),
+		Log:             ctrl.Log.WithName("BGP"),
+		Scheme:          mgr.GetScheme(),
+		BGPClient:       cred.BGP(),
+		InventoryClient: cred.Inventory(),
+		VNetClient:      cred.VNet(),
+		NStorage:        nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BGP")
 		os.Exit(1)
 	}
 	if err = (&controllers.BGPMetaReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("BGPMeta"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:    mgr.GetClient(),
+		Log:       ctrl.Log.WithName("BGPMeta"),
+		Scheme:    mgr.GetScheme(),
+		BGPClient: cred.BGP(),
+		NStorage:  nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BGPMeta")
 		os.Exit(1)
@@ -169,7 +172,8 @@ func main() {
 		Client:     mgr.GetClient(),
 		Log:        ctrl.Log.WithName("L4LB"),
 		Scheme:     mgr.GetScheme(),
-		Cred:       cred,
+		L4LBClient: cred.L4LB(),
+		IPAMClient: cred.IPAM(),
 		NStorage:   nStorage,
 		L4LBTenant: cfg.L4lbTenant,
 		VPCID:      vpcid,
@@ -178,192 +182,194 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.L4LBMetaReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("L4LBMeta"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
-		VPCID:    vpcid,
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("L4LBMeta"),
+		Scheme:     mgr.GetScheme(),
+		L4LBClient: cred.L4LB(),
+		NStorage:   nStorage,
+		VPCID:      vpcid,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "L4LBMeta")
 		os.Exit(1)
 	}
 	if err = (&controllers.SiteReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("Site"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("Site"),
+		Scheme:     mgr.GetScheme(),
+		SiteClient: cred.Site(),
+		NStorage:   nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Site")
 		os.Exit(1)
 	}
 	if err = (&controllers.SiteMetaReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("SiteMeta"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("SiteMeta"),
+		Scheme:     mgr.GetScheme(),
+		SiteClient: cred.Site(),
+		NStorage:   nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SiteMeta")
 		os.Exit(1)
 	}
 	if err = (&controllers.AllocationReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("Allocation"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("Allocation"),
+		Scheme:     mgr.GetScheme(),
+		IPAMClient: cred.IPAM(),
+		NStorage:   nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Allocation")
 		os.Exit(1)
 	}
 	if err = (&controllers.AllocationMetaReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("AllocationMeta"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("AllocationMeta"),
+		Scheme:     mgr.GetScheme(),
+		IPAMClient: cred.IPAM(),
+		NStorage:   nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AllocationMeta")
 		os.Exit(1)
 	}
 	if err = (&controllers.SubnetReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("Subnet"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("Subnet"),
+		Scheme:     mgr.GetScheme(),
+		IPAMClient: cred.IPAM(),
+		NStorage:   nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Subnet")
 		os.Exit(1)
 	}
 	if err = (&controllers.SubnetMetaReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("SubnetMeta"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("SubnetMeta"),
+		Scheme:     mgr.GetScheme(),
+		IPAMClient: cred.IPAM(),
+		NStorage:   nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SubnetMeta")
 		os.Exit(1)
 	}
 	if err = (&controllers.SoftgateReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("Softgate"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:                 mgr.GetClient(),
+		Log:                    ctrl.Log.WithName("Softgate"),
+		Scheme:                 mgr.GetScheme(),
+		InventoryClient:        cred.Inventory(),
+		InventoryProfileClient: cred.InventoryProfile(),
+		NStorage:               nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Softgate")
 		os.Exit(1)
 	}
 	if err = (&controllers.SoftgateMetaReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("SoftgateMeta"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:          mgr.GetClient(),
+		Log:             ctrl.Log.WithName("SoftgateMeta"),
+		Scheme:          mgr.GetScheme(),
+		InventoryClient: cred.Inventory(),
+		NStorage:        nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SoftgateMeta")
 		os.Exit(1)
 	}
 	if err = (&controllers.SwitchReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("Switch"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:                 mgr.GetClient(),
+		Log:                    ctrl.Log.WithName("Switch"),
+		Scheme:                 mgr.GetScheme(),
+		InventoryClient:        cred.Inventory(),
+		InventoryProfileClient: cred.InventoryProfile(),
+		NStorage:               nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Switch")
 		os.Exit(1)
 	}
 	if err = (&controllers.SwitchMetaReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("SwitchMeta"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:          mgr.GetClient(),
+		Log:             ctrl.Log.WithName("SwitchMeta"),
+		Scheme:          mgr.GetScheme(),
+		InventoryClient: cred.Inventory(),
+		NStorage:        nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SwitchMeta")
 		os.Exit(1)
 	}
 	if err = (&controllers.ControllerReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("Controller"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:          mgr.GetClient(),
+		Log:             ctrl.Log.WithName("Controller"),
+		Scheme:          mgr.GetScheme(),
+		InventoryClient: cred.Inventory(),
+		NStorage:        nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Controller")
 		os.Exit(1)
 	}
 	if err = (&controllers.ControllerMetaReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("ControllerMeta"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:          mgr.GetClient(),
+		Log:             ctrl.Log.WithName("ControllerMeta"),
+		Scheme:          mgr.GetScheme(),
+		InventoryClient: cred.Inventory(),
+		NStorage:        nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ControllerMeta")
 		os.Exit(1)
 	}
 	if err = (&controllers.LinkReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("Link"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("Link"),
+		Scheme:     mgr.GetScheme(),
+		LinkClient: cred.Link(),
+		NStorage:   nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Link")
 		os.Exit(1)
 	}
 	if err = (&controllers.LinkMetaReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("LinkMeta"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("LinkMeta"),
+		Scheme:     mgr.GetScheme(),
+		LinkClient: cred.Link(),
+		NStorage:   nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinkMeta")
 		os.Exit(1)
 	}
 	if err = (&controllers.NatReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("Nat"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:    mgr.GetClient(),
+		Log:       ctrl.Log.WithName("Nat"),
+		Scheme:    mgr.GetScheme(),
+		NATClient: cred.NAT(),
+		NStorage:  nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Nat")
 		os.Exit(1)
 	}
 	if err = (&controllers.NatMetaReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("NatMeta"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:    mgr.GetClient(),
+		Log:       ctrl.Log.WithName("NatMeta"),
+		Scheme:    mgr.GetScheme(),
+		NATClient: cred.NAT(),
+		NStorage:  nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NatMeta")
 		os.Exit(1)
 	}
 	if err = (&controllers.InventoryProfileReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("InventoryProfile"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:                 mgr.GetClient(),
+		Log:                    ctrl.Log.WithName("InventoryProfile"),
+		Scheme:                 mgr.GetScheme(),
+		InventoryProfileClient: cred.InventoryProfile(),
+		NStorage:               nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "InventoryProfile")
 		os.Exit(1)
 	}
 	if err = (&controllers.InventoryProfileMetaReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("InventoryProfileMeta"),
-		Scheme:   mgr.GetScheme(),
-		Cred:     cred,
-		NStorage: nStorage,
+		Client:                 mgr.GetClient(),
+		Log:                    ctrl.Log.WithName("InventoryProfileMeta"),
+		Scheme:                 mgr.GetScheme(),
+		InventoryProfileClient: cred.InventoryProfile(),
+		NStorage:               nStorage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "InventoryProfileMeta")
 		os.Exit(1)

@@ -30,16 +30,15 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 // NatReconciler reconciles a Nat object
 type NatReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log       logr.Logger
+	Scheme    *runtime.Scheme
+	NATClient NATClient
+	NStorage  *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=nats,verbs=get;list;watch;create;update;patch;delete
@@ -64,7 +63,6 @@ func (r *NatReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -177,7 +175,7 @@ func (r *NatReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 func (r *NatReconciler) deleteNat(nat *k8sv1alpha1.Nat, natMeta *k8sv1alpha1.NatMeta) (ctrl.Result, error) {
 	if natMeta != nil && natMeta.Spec.ID > 0 && !natMeta.Spec.Reclaim {
-		reply, err := r.Cred.NAT().Delete(natMeta.Spec.ID)
+		reply, err := r.NATClient.Delete(natMeta.Spec.ID)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("{deleteNat} %s", err)
 		}

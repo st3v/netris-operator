@@ -31,17 +31,17 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 	"github.com/netrisai/netriswebapi/v2/types/vnet"
 )
 
 // VNetReconciler reconciles a VNet object
 type VNetReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	VNetClient VNetClient
+	DHCPClient DHCPClient
+	NStorage   *netrisstorage.Storage
 }
 
 // +kubebuilder:rbac:groups=k8s.netris.ai,resources=vnets,verbs=get;list;watch;create;update;patch;delete
@@ -58,7 +58,6 @@ func (r *VNetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -175,7 +174,7 @@ func (r *VNetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 }
 
 func (r *VNetMetaReconciler) updateVNet(id int, vnet *vnet.VNetUpdate) (ctrl.Result, error, error) {
-	reply, err := r.Cred.VNet().Update(id, vnet)
+	reply, err := r.VNetClient.Update(id, vnet)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("{updateVNet} %s", err), err
 	}
@@ -192,7 +191,7 @@ func (r *VNetMetaReconciler) updateVNet(id int, vnet *vnet.VNetUpdate) (ctrl.Res
 
 func (r *VNetReconciler) deleteVNet(vnet *k8sv1alpha1.VNet, vnetMeta *k8sv1alpha1.VNetMeta) (ctrl.Result, error) {
 	if vnetMeta != nil && vnetMeta.Spec.ID > 0 && !vnetMeta.Spec.Reclaim {
-		reply, err := r.Cred.VNet().Delete(vnetMeta.Spec.ID)
+		reply, err := r.VNetClient.Delete(vnetMeta.Spec.ID)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("{deleteVNet} %s", err)
 		}

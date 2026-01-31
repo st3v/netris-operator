@@ -31,16 +31,15 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 // LinkReconciler reconciles a Link object
 type LinkReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	LinkClient LinkClient
+	NStorage   *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=links,verbs=get;list;watch;create;update;patch;delete
@@ -65,7 +64,6 @@ func (r *LinkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -182,7 +180,7 @@ func (r *LinkReconciler) deleteLink(linkCR *k8sv1alpha1.Link, linkMeta *k8sv1alp
 			Local:  link.LinkIDName{ID: linkMeta.Spec.Local},
 			Remote: link.LinkIDName{ID: linkMeta.Spec.Remote},
 		}
-		reply, err := r.Cred.Link().Delete(linkDelete)
+		reply, err := r.LinkClient.Delete(linkDelete)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("{deleteLink} %s", err)
 		}

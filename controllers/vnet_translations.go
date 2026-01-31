@@ -32,7 +32,7 @@ func (r *VNetReconciler) VnetToVnetMeta(vnet *k8sv1alpha1.VNet) (*k8sv1alpha1.VN
 	siteNames := []string{}
 	apiGateways := []k8sv1alpha1.VNetMetaGateway{}
 
-	dhcpOptionSetList, err := r.Cred.DHCP().Get()
+	dhcpOptionSetList, err := r.DHCPClient.Get()
 	if err != nil {
 		return nil, err
 	}

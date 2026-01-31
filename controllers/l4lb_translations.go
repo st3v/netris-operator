@@ -429,7 +429,7 @@ func l4lbUpdateDefaultAnnotations(l4lb *k8sv1alpha1.L4LB) {
 
 func (r *L4LBReconciler) findSiteByIP(ip string) (int, error) {
 	siteID := 0
-	subnets, err := r.Cred.IPAM().Get()
+	subnets, err := r.IPAMClient.Get()
 	if err != nil {
 		return siteID, err
 	}

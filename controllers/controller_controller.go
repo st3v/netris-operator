@@ -30,16 +30,15 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 // ControllerReconciler reconciles a Controller object
 type ControllerReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	InventoryClient InventoryClient
+	NStorage        *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=controllers,verbs=get;list;watch;create;update;patch;delete
@@ -64,7 +63,6 @@ func (r *ControllerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -177,7 +175,7 @@ func (r *ControllerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 
 func (r *ControllerReconciler) deleteController(controller *k8sv1alpha1.Controller, controllerMeta *k8sv1alpha1.ControllerMeta) (ctrl.Result, error) {
 	if controllerMeta != nil && controllerMeta.Spec.ID > 0 && !controllerMeta.Spec.Reclaim {
-		reply, err := r.Cred.Inventory().Delete("controller", controllerMeta.Spec.ID)
+		reply, err := r.InventoryClient.Delete("controller", controllerMeta.Spec.ID)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("{deleteController} %s", err)
 		}

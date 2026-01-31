@@ -31,17 +31,16 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 	"github.com/netrisai/netriswebapi/v2/types/ipam"
 )
 
 // SubnetMetaReconciler reconciles a SubnetMeta object
 type SubnetMetaReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	IPAMClient IPAMClient
+	NStorage   *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=subnetmeta,verbs=get;list;watch;create;update;patch;delete
@@ -79,7 +78,6 @@ func (r *SubnetMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -148,7 +146,7 @@ func (r *SubnetMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 				js, _ := json.Marshal(subnetUpdate)
 				debugLogger.Info("subnetUpdate", "payload", string(js))
 
-				_, err, errMsg := updateSubnet(subnetMeta.Spec.ID, subnetUpdate, r.Cred)
+				_, err, errMsg := r.updateSubnet(subnetMeta.Spec.ID, subnetUpdate)
 				if err != nil {
 					logger.Error(fmt.Errorf("{updateSubnet} %s", err), "")
 					return u.patchSubnetStatus(subnetCR, "Failure", errMsg.Error())
@@ -183,7 +181,7 @@ func (r *SubnetMetaReconciler) createSubnet(subnetMeta *k8sv1alpha1.SubnetMeta) 
 	js, _ := json.Marshal(subnetAdd)
 	debugLogger.Info("subnetToAdd", "payload", string(js))
 
-	reply, err := r.Cred.IPAM().AddSubnet(subnetAdd)
+	reply, err := r.IPAMClient.AddSubnet(subnetAdd)
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}
@@ -218,8 +216,8 @@ func (r *SubnetMetaReconciler) createSubnet(subnetMeta *k8sv1alpha1.SubnetMeta) 
 	return ctrl.Result{}, nil, nil
 }
 
-func updateSubnet(id int, subnet *ipam.Subnet, cred *api.Clientset) (ctrl.Result, error, error) {
-	reply, err := cred.IPAM().UpdateSubnet(id, subnet)
+func (r *SubnetMetaReconciler) updateSubnet(id int, subnet *ipam.Subnet) (ctrl.Result, error, error) {
+	reply, err := r.IPAMClient.UpdateSubnet(id, subnet)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("{updateSubnet} %s", err), err
 	}

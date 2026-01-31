@@ -29,7 +29,6 @@ import (
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 // L4LBReconciler reconciles a L4LB object
@@ -37,7 +36,8 @@ type L4LBReconciler struct {
 	client.Client
 	Log        logr.Logger
 	Scheme     *runtime.Scheme
-	Cred       *api.Clientset
+	L4LBClient L4LBClient
+	IPAMClient IPAMClient
 	NStorage   *netrisstorage.Storage
 	L4LBTenant string
 	VPCID      int
@@ -62,7 +62,6 @@ func (r *L4LBReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 

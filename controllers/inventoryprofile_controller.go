@@ -30,16 +30,15 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 // InventoryProfileReconciler reconciles a InventoryProfile object
 type InventoryProfileReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log                    logr.Logger
+	Scheme                 *runtime.Scheme
+	InventoryProfileClient InventoryProfileClient
+	NStorage               *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=inventoryprofiles,verbs=get;list;watch;create;update;patch;delete
@@ -64,7 +63,6 @@ func (r *InventoryProfileReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -177,7 +175,7 @@ func (r *InventoryProfileReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 func (r *InventoryProfileReconciler) deleteInventoryProfile(inventoryProfile *k8sv1alpha1.InventoryProfile, inventoryProfileMeta *k8sv1alpha1.InventoryProfileMeta) (ctrl.Result, error) {
 	if inventoryProfileMeta != nil && inventoryProfileMeta.Spec.ID > 0 && !inventoryProfileMeta.Spec.Reclaim {
-		reply, err := r.Cred.InventoryProfile().Delete(inventoryProfileMeta.Spec.ID)
+		reply, err := r.InventoryProfileClient.Delete(inventoryProfileMeta.Spec.ID)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("{deleteInventoryProfile} %s", err)
 		}

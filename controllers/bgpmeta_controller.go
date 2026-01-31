@@ -25,7 +25,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 	"github.com/netrisai/netriswebapi/v2/types/bgp"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -41,10 +40,10 @@ import (
 // BGPMetaReconciler reconciles a BGPMeta object
 type BGPMetaReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log       logr.Logger
+	Scheme    *runtime.Scheme
+	BGPClient BGPClient
+	NStorage  *netrisstorage.Storage
 }
 
 // +kubebuilder:rbac:groups=k8s.netris.ai,resources=bgpmeta,verbs=get;list;watch;create;update;patch;delete
@@ -74,7 +73,6 @@ func (r *BGPMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -175,7 +173,7 @@ func (r *BGPMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				js, _ := json.Marshal(bgpUpdate)
 				debugLogger.Info("bgpUpdate", "payload", string(js))
 
-				_, err, errMsg := updateBGP(bgpMeta.Spec.ID, bgpUpdate, r.Cred)
+				_, err, errMsg := updateBGP(bgpMeta.Spec.ID, bgpUpdate, r.BGPClient)
 				if err != nil {
 					logger.Error(fmt.Errorf("{updateBGP} %s", err), "")
 					return u.patchBGPStatus(bgpCR, "Failure", errMsg.Error())
@@ -210,7 +208,7 @@ func (r *BGPMetaReconciler) createBGP(bgpMeta *k8sv1alpha1.BGPMeta) (ctrl.Result
 	js, _ := json.Marshal(bgpAdd)
 	debugLogger.Info("bgpToAdd", "payload", string(js))
 
-	reply, err := r.Cred.BGP().Add(bgpAdd)
+	reply, err := r.BGPClient.Add(bgpAdd)
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}
@@ -253,8 +251,8 @@ func (r *BGPMetaReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func updateBGP(id int, bgp *bgp.EBGPUpdate, cred *api.Clientset) (ctrl.Result, error, error) {
-	reply, err := cred.BGP().Update(id, bgp)
+func updateBGP(id int, bgp *bgp.EBGPUpdate, client BGPClient) (ctrl.Result, error, error) {
+	reply, err := client.Update(id, bgp)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("{updateBGP} %s", err), err
 	}

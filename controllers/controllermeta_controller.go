@@ -31,17 +31,16 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 	"github.com/netrisai/netriswebapi/v2/types/inventory"
 )
 
 // ControllerMetaReconciler reconciles a ControllerMeta object
 type ControllerMetaReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	InventoryClient InventoryClient
+	NStorage        *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=controllermeta,verbs=get;list;watch;create;update;patch;delete
@@ -79,7 +78,6 @@ func (r *ControllerMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -150,7 +148,7 @@ func (r *ControllerMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 				js, _ := json.Marshal(controllerUpdate)
 				debugLogger.Info("controllerUpdate", "payload", string(js))
 
-				_, err, errMsg := updateController(controllerMeta.Spec.ID, controllerUpdate, r.Cred)
+				_, err, errMsg := r.updateController(controllerMeta.Spec.ID, controllerUpdate)
 				if err != nil {
 					logger.Error(fmt.Errorf("{updateController} %s", err), "")
 					return u.patchControllerStatus(controllerCR, "Failure", errMsg.Error())
@@ -192,7 +190,7 @@ func (r *ControllerMetaReconciler) createController(controllerMeta *k8sv1alpha1.
 	js, _ := json.Marshal(controllerAdd)
 	debugLogger.Info("controllerToAdd", "payload", string(js))
 
-	reply, err := r.Cred.Inventory().AddController(controllerAdd)
+	reply, err := r.InventoryClient.AddController(controllerAdd)
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}
@@ -227,8 +225,8 @@ func (r *ControllerMetaReconciler) createController(controllerMeta *k8sv1alpha1.
 	return ctrl.Result{}, nil, nil
 }
 
-func updateController(id int, controller *inventory.HWControllerUpdate, cred *api.Clientset) (ctrl.Result, error, error) {
-	reply, err := cred.Inventory().UpdateController(id, controller)
+func (r *ControllerMetaReconciler) updateController(id int, controller *inventory.HWControllerUpdate) (ctrl.Result, error, error) {
+	reply, err := r.InventoryClient.UpdateController(id, controller)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("{updateController} %s", err), err
 	}

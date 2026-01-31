@@ -23,7 +23,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 	"github.com/netrisai/netriswebapi/v2/types/site"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -38,10 +37,10 @@ import (
 // SiteMetaReconciler reconciles a SiteMeta object
 type SiteMetaReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	SiteClient SiteClient
+	NStorage   *netrisstorage.Storage
 }
 
 // +kubebuilder:rbac:groups=k8s.netris.ai,resources=sitemeta,verbs=get;list;watch;create;update;patch;delete
@@ -69,7 +68,7 @@ func (r *SiteMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	if siteMeta.DeletionTimestamp != nil {
 		if siteMeta.Spec.ID > 0 && !siteMeta.Spec.Reclaim {
-			reply, err := r.Cred.Site().Delete(siteMeta.Spec.ID)
+			reply, err := r.SiteClient.Delete(siteMeta.Spec.ID)
 			if err != nil {
 				return ctrl.Result{}, fmt.Errorf("{deleteSite} %s", err)
 			}
@@ -108,7 +107,6 @@ func (r *SiteMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -178,7 +176,7 @@ func (r *SiteMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				js, _ := json.Marshal(siteUpdate)
 				debugLogger.Info("siteUpdate", "payload", string(js))
 
-				_, err, errMsg := updateSite(siteMeta.Spec.ID, siteUpdate, r.Cred)
+				_, err, errMsg := r.updateSite(siteMeta.Spec.ID, siteUpdate)
 				if err != nil {
 					logger.Error(fmt.Errorf("{updateSite} %s", err), "")
 					return u.patchSiteStatus(siteCR, "Failure", errMsg.Error())
@@ -213,7 +211,7 @@ func (r *SiteMetaReconciler) createSite(siteMeta *k8sv1alpha1.SiteMeta) (ctrl.Re
 	js, _ := json.Marshal(siteAdd)
 	debugLogger.Info("siteToAdd", "payload", string(js))
 
-	reply, err := r.Cred.Site().Add(siteAdd)
+	reply, err := r.SiteClient.Add(siteAdd)
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}
@@ -249,8 +247,8 @@ func (r *SiteMetaReconciler) createSite(siteMeta *k8sv1alpha1.SiteMeta) (ctrl.Re
 	return ctrl.Result{}, nil, nil
 }
 
-func updateSite(id int, site *site.Site, cred *api.Clientset) (ctrl.Result, error, error) {
-	reply, err := cred.Site().Update(id, site)
+func (r *SiteMetaReconciler) updateSite(id int, site *site.Site) (ctrl.Result, error, error) {
+	reply, err := r.SiteClient.Update(id, site)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("{updateSite} %s", err), err
 	}

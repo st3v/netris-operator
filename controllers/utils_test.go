@@ -163,40 +163,40 @@ func TestMakeGateway(t *testing.T) {
 
 func TestRegParser(t *testing.T) {
 	tests := []struct {
-		name          string
-		valueMatch    []string
-		subexpNames   []string
-		expected      map[string]string
+		name        string
+		valueMatch  []string
+		subexpNames []string
+		expected    map[string]string
 	}{
 		{
-			name:          "empty inputs",
-			valueMatch:    []string{},
-			subexpNames:   []string{},
-			expected:      map[string]string{},
+			name:        "empty inputs",
+			valueMatch:  []string{},
+			subexpNames: []string{},
+			expected:    map[string]string{},
 		},
 		{
-			name:          "single named group",
-			valueMatch:    []string{"full-match", "value1"},
-			subexpNames:   []string{"", "group1"},
-			expected:      map[string]string{"group1": "value1"},
+			name:        "single named group",
+			valueMatch:  []string{"full-match", "value1"},
+			subexpNames: []string{"", "group1"},
+			expected:    map[string]string{"group1": "value1"},
 		},
 		{
-			name:          "multiple named groups",
-			valueMatch:    []string{"full-match", "val1", "val2", "val3"},
-			subexpNames:   []string{"", "first", "second", "third"},
-			expected:      map[string]string{"first": "val1", "second": "val2", "third": "val3"},
+			name:        "multiple named groups",
+			valueMatch:  []string{"full-match", "val1", "val2", "val3"},
+			subexpNames: []string{"", "first", "second", "third"},
+			expected:    map[string]string{"first": "val1", "second": "val2", "third": "val3"},
 		},
 		{
-			name:          "unnamed groups are skipped",
-			valueMatch:    []string{"full-match", "unnamed", "named-val"},
-			subexpNames:   []string{"", "", "named"},
-			expected:      map[string]string{"named": "named-val"},
+			name:        "unnamed groups are skipped",
+			valueMatch:  []string{"full-match", "unnamed", "named-val"},
+			subexpNames: []string{"", "", "named"},
+			expected:    map[string]string{"named": "named-val"},
 		},
 		{
-			name:          "empty named group value",
-			valueMatch:    []string{"full-match", ""},
-			subexpNames:   []string{"", "empty"},
-			expected:      map[string]string{"empty": ""},
+			name:        "empty named group value",
+			valueMatch:  []string{"full-match", ""},
+			subexpNames: []string{"", "empty"},
+			expected:    map[string]string{"empty": ""},
 		},
 	}
 

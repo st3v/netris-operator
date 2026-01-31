@@ -30,16 +30,16 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 // SoftgateReconciler reconciles a Softgate object
 type SoftgateReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log                    logr.Logger
+	Scheme                 *runtime.Scheme
+	InventoryClient        InventoryClient
+	InventoryProfileClient InventoryProfileClient
+	NStorage               *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=softgates,verbs=get;list;watch;create;update;patch;delete
@@ -64,7 +64,6 @@ func (r *SoftgateReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -177,7 +176,7 @@ func (r *SoftgateReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 func (r *SoftgateReconciler) deleteSoftgate(softgate *k8sv1alpha1.Softgate, softgateMeta *k8sv1alpha1.SoftgateMeta) (ctrl.Result, error) {
 	if softgateMeta != nil && softgateMeta.Spec.ID > 0 && !softgateMeta.Spec.Reclaim {
-		reply, err := r.Cred.Inventory().Delete("softgate", softgateMeta.Spec.ID)
+		reply, err := r.InventoryClient.Delete("softgate", softgateMeta.Spec.ID)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("{deleteSoftgate} %s", err)
 		}

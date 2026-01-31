@@ -32,17 +32,16 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 	"github.com/netrisai/netriswebapi/v2/types/inventory"
 )
 
 // SoftgateMetaReconciler reconciles a SoftgateMeta object
 type SoftgateMetaReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	InventoryClient InventoryClient
+	NStorage        *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=softgatemeta,verbs=get;list;watch;create;update;patch;delete
@@ -80,7 +79,6 @@ func (r *SoftgateMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -159,7 +157,7 @@ func (r *SoftgateMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				js, _ := json.Marshal(softgateUpdate)
 				debugLogger.Info("softgateUpdate", "payload", string(js))
 
-				_, err, errMsg := updateSoftgate(softgateMeta.Spec.ID, softgateUpdate, r.Cred)
+				_, err, errMsg := updateSoftgate(softgateMeta.Spec.ID, softgateUpdate, r.InventoryClient)
 				if err != nil {
 					logger.Error(fmt.Errorf("{updateSoftgate} %s", err), "")
 					return u.patchSoftgateStatus(softgateCR, "Failure", errMsg.Error())
@@ -200,7 +198,7 @@ func (r *SoftgateMetaReconciler) createSoftgate(softgateMeta *k8sv1alpha1.Softga
 	js, _ := json.Marshal(softgateAdd)
 	debugLogger.Info("softgateToAdd", "payload", string(js))
 
-	reply, err := r.Cred.Inventory().AddSoftgate(softgateAdd)
+	reply, err := r.InventoryClient.AddSoftgate(softgateAdd)
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}
@@ -235,8 +233,8 @@ func (r *SoftgateMetaReconciler) createSoftgate(softgateMeta *k8sv1alpha1.Softga
 	return ctrl.Result{}, nil, nil
 }
 
-func updateSoftgate(id int, softgate *inventory.HWSoftgateUpdate, cred *api.Clientset) (ctrl.Result, error, error) {
-	reply, err := cred.Inventory().UpdateSoftgate(id, softgate)
+func updateSoftgate(id int, softgate *inventory.HWSoftgateUpdate, inventoryClient InventoryClient) (ctrl.Result, error, error) {
+	reply, err := inventoryClient.UpdateSoftgate(id, softgate)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("{updateSoftgate} %s", err), err
 	}

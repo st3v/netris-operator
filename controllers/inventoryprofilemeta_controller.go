@@ -32,16 +32,15 @@ import (
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
 	"github.com/netrisai/netriswebapi/v1/types/inventoryprofile"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 // InventoryProfileMetaReconciler reconciles a InventoryProfileMeta object
 type InventoryProfileMetaReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log                    logr.Logger
+	Scheme                 *runtime.Scheme
+	InventoryProfileClient InventoryProfileClient
+	NStorage               *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=inventoryprofilemeta,verbs=get;list;watch;create;update;patch;delete
@@ -79,7 +78,6 @@ func (r *InventoryProfileMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Resul
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -149,7 +147,7 @@ func (r *InventoryProfileMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Resul
 				js, _ := json.Marshal(inventoryProfileUpdate)
 				debugLogger.Info("inventoryProfileUpdate", "payload", string(js))
 
-				_, err, errMsg := updateInventoryProfile(inventoryProfileMeta.Spec.ID, inventoryProfileUpdate, r.Cred)
+				_, err, errMsg := r.updateInventoryProfile(inventoryProfileMeta.Spec.ID, inventoryProfileUpdate)
 				if err != nil {
 					logger.Error(fmt.Errorf("{updateInventoryProfile} %s", err), "")
 					return u.patchInventoryProfileStatus(inventoryProfileCR, "Failure", errMsg.Error())
@@ -184,7 +182,7 @@ func (r *InventoryProfileMetaReconciler) createInventoryProfile(inventoryProfile
 	js, _ := json.Marshal(inventoryProfileAdd)
 	debugLogger.Info("inventoryProfileToAdd", "payload", string(js))
 
-	reply, err := r.Cred.InventoryProfile().Add(inventoryProfileAdd)
+	reply, err := r.InventoryProfileClient.Add(inventoryProfileAdd)
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}
@@ -220,8 +218,8 @@ func (r *InventoryProfileMetaReconciler) createInventoryProfile(inventoryProfile
 	return ctrl.Result{}, nil, nil
 }
 
-func updateInventoryProfile(id int, inventoryProfile *inventoryprofile.ProfileW, cred *api.Clientset) (ctrl.Result, error, error) {
-	reply, err := cred.InventoryProfile().Update(inventoryProfile)
+func (r *InventoryProfileMetaReconciler) updateInventoryProfile(id int, inventoryProfile *inventoryprofile.ProfileW) (ctrl.Result, error, error) {
+	reply, err := r.InventoryProfileClient.Update(inventoryProfile)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("{updateInventoryProfile} %s", err), err
 	}

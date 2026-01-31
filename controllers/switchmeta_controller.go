@@ -32,17 +32,16 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 	"github.com/netrisai/netriswebapi/v2/types/inventory"
 )
 
 // SwitchMetaReconciler reconciles a SwitchMeta object
 type SwitchMetaReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	InventoryClient InventoryClient
+	NStorage        *netrisstorage.Storage
 }
 
 //+kubebuilder:rbac:groups=k8s.netris.ai,resources=switchmeta,verbs=get;list;watch;create;update;patch;delete
@@ -80,7 +79,6 @@ func (r *SwitchMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -163,7 +161,7 @@ func (r *SwitchMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 				js, _ := json.Marshal(switchUpdate)
 				debugLogger.Info("switchUpdate", "payload", string(js))
 
-				_, err, errMsg := updateSwitch(switchMeta.Spec.ID, switchUpdate, r.Cred)
+				_, err, errMsg := updateSwitch(switchMeta.Spec.ID, switchUpdate, r.InventoryClient)
 				if err != nil {
 					logger.Error(fmt.Errorf("{updateSwitch} %s", err), "")
 					return u.patchSwitchStatus(switchCR, "Failure", errMsg.Error())
@@ -204,7 +202,7 @@ func (r *SwitchMetaReconciler) createSwitch(switchMeta *k8sv1alpha1.SwitchMeta) 
 	js, _ := json.Marshal(switchAdd)
 	debugLogger.Info("switchToAdd", "payload", string(js))
 
-	reply, err := r.Cred.Inventory().AddSwitch(switchAdd)
+	reply, err := r.InventoryClient.AddSwitch(switchAdd)
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}
@@ -239,8 +237,8 @@ func (r *SwitchMetaReconciler) createSwitch(switchMeta *k8sv1alpha1.SwitchMeta) 
 	return ctrl.Result{}, nil, nil
 }
 
-func updateSwitch(id int, switchH *inventory.HWSwitchUpdate, cred *api.Clientset) (ctrl.Result, error, error) {
-	reply, err := cred.Inventory().UpdateSwitch(id, switchH)
+func updateSwitch(id int, switchH *inventory.HWSwitchUpdate, inventoryClient InventoryClient) (ctrl.Result, error, error) {
+	reply, err := inventoryClient.UpdateSwitch(id, switchH)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("{updateSwitch} %s", err), err
 	}

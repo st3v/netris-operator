@@ -31,17 +31,16 @@ import (
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
 	"github.com/netrisai/netriswebapi/http"
-	api "github.com/netrisai/netriswebapi/v2"
 	"github.com/netrisai/netriswebapi/v2/types/ipam"
 )
 
 // AllocationMetaReconciler reconciles a AllocationMeta object
 type AllocationMetaReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Cred     *api.Clientset
-	NStorage *netrisstorage.Storage
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	IPAMClient IPAMClient
+	NStorage   *netrisstorage.Storage
 }
 
 // +kubebuilder:rbac:groups=k8s.netris.ai,resources=allocationmeta,verbs=get;list;watch;create;update;patch;delete
@@ -76,7 +75,6 @@ func (r *AllocationMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		Client:      r.Client,
 		Logger:      logger,
 		DebugLogger: debugLogger,
-		Cred:        r.Cred,
 		NStorage:    r.NStorage,
 	}
 
@@ -146,7 +144,7 @@ func (r *AllocationMetaReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 				js, _ := json.Marshal(allocationUpdate)
 				debugLogger.Info("allocationUpdate", "payload", string(js))
 
-				_, err, errMsg := updateAllocation(allocationMeta.Spec.ID, allocationUpdate, r.Cred)
+				_, err, errMsg := updateAllocation(allocationMeta.Spec.ID, allocationUpdate, r.IPAMClient)
 				if err != nil {
 					logger.Error(fmt.Errorf("{updateAllocation} %s", err), "")
 					return u.patchAllocationStatus(allocationCR, "Failure", errMsg.Error())
@@ -181,7 +179,7 @@ func (r *AllocationMetaReconciler) createAllocation(allocationMeta *k8sv1alpha1.
 	js, _ := json.Marshal(allocationAdd)
 	debugLogger.Info("allocationToAdd", "payload", string(js))
 
-	reply, err := r.Cred.IPAM().AddAllocation(allocationAdd)
+	reply, err := r.IPAMClient.AddAllocation(allocationAdd)
 	if err != nil {
 		return ctrl.Result{}, err, err
 	}
@@ -216,8 +214,8 @@ func (r *AllocationMetaReconciler) createAllocation(allocationMeta *k8sv1alpha1.
 	return ctrl.Result{}, nil, nil
 }
 
-func updateAllocation(id int, allocation *ipam.Allocation, cred *api.Clientset) (ctrl.Result, error, error) {
-	reply, err := cred.IPAM().UpdateAllocation(id, allocation)
+func updateAllocation(id int, allocation *ipam.Allocation, ipamClient IPAMClient) (ctrl.Result, error, error) {
+	reply, err := ipamClient.UpdateAllocation(id, allocation)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("{updateAllocation} %s", err), err
 	}

@@ -158,16 +158,16 @@ func TestCompareVNetMetaAPIVnetSites(t *testing.T) {
 
 func TestCompareVNetMetaAPIVnetTenants(t *testing.T) {
 	tests := []struct {
-		name        string
-		k8sTenants  []string
-		apiTenants  []vnet.VNetDetailedGuestTenant
-		wantMatch   bool
+		name       string
+		k8sTenants []string
+		apiTenants []vnet.VNetDetailedGuestTenant
+		wantMatch  bool
 	}{
 		{
-			name:        "both empty",
-			k8sTenants:  []string{},
-			apiTenants:  []vnet.VNetDetailedGuestTenant{},
-			wantMatch:   true,
+			name:       "both empty",
+			k8sTenants: []string{},
+			apiTenants: []vnet.VNetDetailedGuestTenant{},
+			wantMatch:  true,
 		},
 		{
 			name:       "matching tenants",
@@ -291,9 +291,9 @@ func TestVnetMustUpdateAnnotations(t *testing.T) {
 
 func TestVnetUpdateDefaultAnnotations(t *testing.T) {
 	tests := []struct {
-		name            string
+		name              string
 		inputAnnotations  map[string]string
-		wantImport      string
+		wantImport        string
 		wantReclaimPolicy string
 	}{
 		{
@@ -361,61 +361,61 @@ func TestVnetUpdateDefaultAnnotations(t *testing.T) {
 
 func TestVnetCompareFieldsForNewMeta(t *testing.T) {
 	tests := []struct {
-		name        string
-		vnetGen     int64
+		name            string
+		vnetGen         int64
 		vnetAnnotations map[string]string
-		metaGen     int64
-		metaImported bool
-		metaReclaim bool
-		wantChanged bool
+		metaGen         int64
+		metaImported    bool
+		metaReclaim     bool
+		wantChanged     bool
 	}{
 		{
-			name:        "no changes",
-			vnetGen:     1,
+			name:    "no changes",
+			vnetGen: 1,
 			vnetAnnotations: map[string]string{
 				"resource.k8s.netris.ai/import":        "false",
 				"resource.k8s.netris.ai/reclaimPolicy": "delete",
 			},
-			metaGen:     1,
+			metaGen:      1,
 			metaImported: false,
-			metaReclaim: false,
-			wantChanged: false,
+			metaReclaim:  false,
+			wantChanged:  false,
 		},
 		{
-			name:        "generation changed",
-			vnetGen:     2,
+			name:    "generation changed",
+			vnetGen: 2,
 			vnetAnnotations: map[string]string{
 				"resource.k8s.netris.ai/import":        "false",
 				"resource.k8s.netris.ai/reclaimPolicy": "delete",
 			},
-			metaGen:     1,
+			metaGen:      1,
 			metaImported: false,
-			metaReclaim: false,
-			wantChanged: true,
+			metaReclaim:  false,
+			wantChanged:  true,
 		},
 		{
-			name:        "import annotation changed",
-			vnetGen:     1,
+			name:    "import annotation changed",
+			vnetGen: 1,
 			vnetAnnotations: map[string]string{
 				"resource.k8s.netris.ai/import":        "true",
 				"resource.k8s.netris.ai/reclaimPolicy": "delete",
 			},
-			metaGen:     1,
+			metaGen:      1,
 			metaImported: false,
-			metaReclaim: false,
-			wantChanged: true,
+			metaReclaim:  false,
+			wantChanged:  true,
 		},
 		{
-			name:        "reclaim annotation changed",
-			vnetGen:     1,
+			name:    "reclaim annotation changed",
+			vnetGen: 1,
 			vnetAnnotations: map[string]string{
 				"resource.k8s.netris.ai/import":        "false",
 				"resource.k8s.netris.ai/reclaimPolicy": "retain",
 			},
-			metaGen:     1,
+			metaGen:      1,
 			metaImported: false,
-			metaReclaim: false,
-			wantChanged: true,
+			metaReclaim:  false,
+			wantChanged:  true,
 		},
 		{
 			name:            "missing annotations treated as false",

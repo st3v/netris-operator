@@ -28,7 +28,6 @@ import (
 
 	k8sv1alpha1 "github.com/netrisai/netris-operator/api/v1alpha1"
 	"github.com/netrisai/netris-operator/netrisstorage"
-	api "github.com/netrisai/netriswebapi/v2"
 )
 
 var (
@@ -41,7 +40,6 @@ type uniReconciler struct {
 	client.Client
 	Logger      logr.Logger
 	DebugLogger logr.InfoLogger
-	Cred        *api.Clientset
 	NStorage    *netrisstorage.Storage
 }
 

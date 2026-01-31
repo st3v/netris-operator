@@ -31,7 +31,7 @@ func (r *SwitchReconciler) SwitchToSwitchMeta(switchH *k8sv1alpha1.Switch) (*k8s
 		reclaim  = false
 	)
 
-	nosList, err := r.Cred.Inventory().GetNOS()
+	nosList, err := r.InventoryClient.GetNOS()
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (r *SwitchReconciler) SwitchToSwitchMeta(switchH *k8sv1alpha1.Switch) (*k8s
 	}
 
 	profileID := 0
-	profiles, err := r.Cred.InventoryProfile().Get()
+	profiles, err := r.InventoryProfileClient.Get()
 	if err != nil {
 		return nil, err
 	}
