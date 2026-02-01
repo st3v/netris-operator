@@ -422,6 +422,9 @@ func l4lbUpdateDefaultAnnotations(l4lb *k8sv1alpha1.L4LB) {
 		reclaim = "retain"
 	}
 	annotations := l4lb.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
 	annotations["resource.k8s.netris.ai/import"] = imported
 	annotations["resource.k8s.netris.ai/reclaimPolicy"] = reclaim
 	l4lb.SetAnnotations(annotations)

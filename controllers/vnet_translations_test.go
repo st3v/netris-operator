@@ -297,6 +297,12 @@ func TestVnetUpdateDefaultAnnotations(t *testing.T) {
 		wantReclaimPolicy string
 	}{
 		{
+			name:              "nil annotations get defaults",
+			inputAnnotations:  nil,
+			wantImport:        "false",
+			wantReclaimPolicy: "delete",
+		},
+		{
 			name:              "empty annotations get defaults",
 			inputAnnotations:  map[string]string{},
 			wantImport:        "false",

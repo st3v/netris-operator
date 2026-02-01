@@ -157,6 +157,12 @@ func TestInventoryProfileUpdateDefaultAnnotations(t *testing.T) {
 		expectedReclaimPolicy string
 	}{
 		{
+			name:                  "nil annotations get defaults",
+			annotations:           nil,
+			expectedImport:        "false",
+			expectedReclaimPolicy: "delete",
+		},
+		{
 			name:                  "empty annotations get defaults",
 			annotations:           map[string]string{},
 			expectedImport:        "false",
@@ -204,10 +210,10 @@ func TestInventoryProfileUpdateDefaultAnnotations(t *testing.T) {
 
 func TestCompareInventoryProfileAPIInventoryProfileCustomRules(t *testing.T) {
 	tests := []struct {
-		name              string
-		inventoryRules    []k8sv1alpha1.InventoryProfileCustomRule
-		apiProfileRules   []inventoryprofile.CustomRule
-		expected          bool
+		name            string
+		inventoryRules  []k8sv1alpha1.InventoryProfileCustomRule
+		apiProfileRules []inventoryprofile.CustomRule
+		expected        bool
 	}{
 		{
 			name:            "both empty",
@@ -293,22 +299,22 @@ func TestUnmarshalTimezone(t *testing.T) {
 
 func TestInventoryProfileMetaToNetrisUpdate(t *testing.T) {
 	tests := []struct {
-		name            string
-		profileMeta     *k8sv1alpha1.InventoryProfileMeta
-		expectedName    string
+		name             string
+		profileMeta      *k8sv1alpha1.InventoryProfileMeta
+		expectedName     string
 		expectedTimezone string
-		expectedDesc    string
+		expectedDesc     string
 	}{
 		{
 			name: "basic conversion",
 			profileMeta: &k8sv1alpha1.InventoryProfileMeta{
 				Spec: k8sv1alpha1.InventoryProfileMetaSpec{
-					ID:                     1,
-					InventoryProfileName:   "test-profile",
-					Description:            "Test description",
-					Timezone:               "America/New_York",
-					AllowSSHFromIPv4:       []string{"10.0.0.0/8"},
-					DNSServers:             []string{"8.8.8.8"},
+					ID:                   1,
+					InventoryProfileName: "test-profile",
+					Description:          "Test description",
+					Timezone:             "America/New_York",
+					AllowSSHFromIPv4:     []string{"10.0.0.0/8"},
+					DNSServers:           []string{"8.8.8.8"},
 				},
 			},
 			expectedName:     "test-profile",

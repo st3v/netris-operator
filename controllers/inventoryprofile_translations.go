@@ -107,6 +107,9 @@ func inventoryProfileUpdateDefaultAnnotations(inventoryProfile *k8sv1alpha1.Inve
 		reclaim = "retain"
 	}
 	annotations := inventoryProfile.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
 	annotations["resource.k8s.netris.ai/import"] = imported
 	annotations["resource.k8s.netris.ai/reclaimPolicy"] = reclaim
 	inventoryProfile.SetAnnotations(annotations)

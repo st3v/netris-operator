@@ -161,6 +161,12 @@ func TestL4lbUpdateDefaultAnnotations(t *testing.T) {
 		expectedReclaimPolicy string
 	}{
 		{
+			name:                  "nil annotations get defaults",
+			annotations:           nil,
+			expectedImport:        "false",
+			expectedReclaimPolicy: "delete",
+		},
+		{
 			name:                  "empty annotations get defaults",
 			annotations:           map[string]string{},
 			expectedImport:        "false",
@@ -208,16 +214,16 @@ func TestL4lbUpdateDefaultAnnotations(t *testing.T) {
 
 func TestCompareL4LBMetaAPIL4LBBackend(t *testing.T) {
 	tests := []struct {
-		name            string
+		name             string
 		l4lbMetaBackends []k8sv1alpha1.L4LBMetaBackend
-		apiL4LBBackends []l4lb.LBBackend
-		expected        bool
+		apiL4LBBackends  []l4lb.LBBackend
+		expected         bool
 	}{
 		{
-			name:            "both empty",
+			name:             "both empty",
 			l4lbMetaBackends: []k8sv1alpha1.L4LBMetaBackend{},
-			apiL4LBBackends: []l4lb.LBBackend{},
-			expected:        true,
+			apiL4LBBackends:  []l4lb.LBBackend{},
+			expected:         true,
 		},
 		{
 			name: "matching backends",
@@ -266,16 +272,16 @@ func TestCompareL4LBMetaAPIL4LBBackend(t *testing.T) {
 
 func TestCompareL4LBMetaAPIL4LBHealthCheck(t *testing.T) {
 	tests := []struct {
-		name               string
+		name                string
 		l4lbMetaHealthCheck k8sv1alpha1.L4LBMetaHealthCheck
-		apiL4LBHealthCheck l4lb.LBHealthCheck
-		expected           bool
+		apiL4LBHealthCheck  l4lb.LBHealthCheck
+		expected            bool
 	}{
 		{
-			name:               "both empty",
+			name:                "both empty",
 			l4lbMetaHealthCheck: k8sv1alpha1.L4LBMetaHealthCheck{},
-			apiL4LBHealthCheck: l4lb.LBHealthCheck{},
-			expected:           true,
+			apiL4LBHealthCheck:  l4lb.LBHealthCheck{},
+			expected:            true,
 		},
 		{
 			name: "matching TCP health check",
@@ -335,12 +341,12 @@ func TestCompareL4LBMetaAPIL4LBHealthCheck(t *testing.T) {
 
 func TestL4LBMetaToNetris(t *testing.T) {
 	tests := []struct {
-		name           string
-		l4lbMeta       *k8sv1alpha1.L4LBMeta
-		expectedName   string
-		expectedPort   int
-		expectedProto  string
-		expectedAuto   bool
+		name          string
+		l4lbMeta      *k8sv1alpha1.L4LBMeta
+		expectedName  string
+		expectedPort  int
+		expectedProto string
+		expectedAuto  bool
 	}{
 		{
 			name: "basic TCP load balancer",

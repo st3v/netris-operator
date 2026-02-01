@@ -98,6 +98,9 @@ func siteUpdateDefaultAnnotations(site *k8sv1alpha1.Site) {
 		reclaim = "retain"
 	}
 	annotations := site.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
 	annotations["resource.k8s.netris.ai/import"] = imported
 	annotations["resource.k8s.netris.ai/reclaimPolicy"] = reclaim
 	site.SetAnnotations(annotations)

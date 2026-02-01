@@ -157,6 +157,12 @@ func TestSubnetUpdateDefaultAnnotations(t *testing.T) {
 		expectedReclaimPolicy string
 	}{
 		{
+			name:                  "nil annotations get defaults",
+			annotations:           nil,
+			expectedImport:        "false",
+			expectedReclaimPolicy: "delete",
+		},
+		{
 			name:                  "empty annotations get defaults",
 			annotations:           map[string]string{},
 			expectedImport:        "false",
@@ -204,19 +210,19 @@ func TestSubnetUpdateDefaultAnnotations(t *testing.T) {
 
 func TestCompareSubnetMetaSiteAPISubnetSite(t *testing.T) {
 	tests := []struct {
-		name           string
+		name            string
 		subnetMetaSites []int
-		apiSubnetSites []ipam.IDName
-		expected       bool
+		apiSubnetSites  []ipam.IDName
+		expected        bool
 	}{
 		{
-			name:           "both empty",
+			name:            "both empty",
 			subnetMetaSites: []int{},
-			apiSubnetSites: []ipam.IDName{},
-			expected:       true,
+			apiSubnetSites:  []ipam.IDName{},
+			expected:        true,
 		},
 		{
-			name:           "matching sites",
+			name:            "matching sites",
 			subnetMetaSites: []int{1, 2, 3},
 			apiSubnetSites: []ipam.IDName{
 				{ID: 1},
@@ -226,7 +232,7 @@ func TestCompareSubnetMetaSiteAPISubnetSite(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:           "different sites",
+			name:            "different sites",
 			subnetMetaSites: []int{1, 2},
 			apiSubnetSites: []ipam.IDName{
 				{ID: 1},
@@ -235,7 +241,7 @@ func TestCompareSubnetMetaSiteAPISubnetSite(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:           "different count",
+			name:            "different count",
 			subnetMetaSites: []int{1, 2},
 			apiSubnetSites: []ipam.IDName{
 				{ID: 1},

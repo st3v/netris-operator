@@ -140,6 +140,9 @@ func switchUpdateDefaultAnnotations(switchH *k8sv1alpha1.Switch) {
 		reclaim = "retain"
 	}
 	annotations := switchH.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
 	annotations["resource.k8s.netris.ai/import"] = imported
 	annotations["resource.k8s.netris.ai/reclaimPolicy"] = reclaim
 	switchH.SetAnnotations(annotations)

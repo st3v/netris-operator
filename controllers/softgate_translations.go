@@ -125,6 +125,9 @@ func softgateUpdateDefaultAnnotations(softgate *k8sv1alpha1.Softgate) {
 		reclaim = "retain"
 	}
 	annotations := softgate.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
 	annotations["resource.k8s.netris.ai/import"] = imported
 	annotations["resource.k8s.netris.ai/reclaimPolicy"] = reclaim
 	softgate.SetAnnotations(annotations)

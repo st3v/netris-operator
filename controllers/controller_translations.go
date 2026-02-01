@@ -106,6 +106,9 @@ func controllerUpdateDefaultAnnotations(controller *k8sv1alpha1.Controller) {
 		reclaim = "retain"
 	}
 	annotations := controller.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
 	annotations["resource.k8s.netris.ai/import"] = imported
 	annotations["resource.k8s.netris.ai/reclaimPolicy"] = reclaim
 	controller.SetAnnotations(annotations)

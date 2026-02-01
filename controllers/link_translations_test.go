@@ -203,6 +203,12 @@ func TestLinkUpdateDefaultAnnotations(t *testing.T) {
 		expectedReclaimPolicy string
 	}{
 		{
+			name:                  "nil annotations get defaults",
+			annotations:           nil,
+			expectedImport:        "false",
+			expectedReclaimPolicy: "delete",
+		},
+		{
 			name:                  "empty annotations",
 			annotations:           map[string]string{},
 			expectedImport:        "false",

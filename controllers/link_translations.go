@@ -103,6 +103,9 @@ func linkUpdateDefaultAnnotations(link *k8sv1alpha1.Link) {
 		reclaim = "retain"
 	}
 	annotations := link.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
 	annotations["resource.k8s.netris.ai/import"] = imported
 	annotations["resource.k8s.netris.ai/reclaimPolicy"] = reclaim
 	link.SetAnnotations(annotations)
