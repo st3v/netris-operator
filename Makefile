@@ -138,3 +138,46 @@ helm-push: helm
 # Unit tests
 unit-test:
 	go test -short $$(go list ./... | grep -v /e2e) --cover
+
+# E2E Testing with kind cluster
+E2E_CLUSTER_NAME ?= netris-e2e
+E2E_IMG ?= netrisai/netris-operator:e2e
+
+.PHONY: e2e-setup e2e-teardown e2e-test e2e
+
+e2e-setup: ## Create kind cluster and deploy netris-controller
+	@echo "Creating kind cluster..."
+	@if ! kind get clusters | grep -q "^$(E2E_CLUSTER_NAME)$$"; then \
+		kind create cluster --name $(E2E_CLUSTER_NAME) --wait 60s; \
+	else \
+		echo "Cluster $(E2E_CLUSTER_NAME) already exists, skipping creation"; \
+	fi
+	kubectl cluster-info --context kind-$(E2E_CLUSTER_NAME)
+	@echo "Adding netrisai Helm repo..."
+	helm repo add netrisai https://netrisai.github.io/charts || true
+	helm repo update
+	@echo "Installing netris-controller..."
+	helm upgrade --install netris-controller netrisai/netris-controller -f hack/e2e-values.yaml --wait --timeout 10m
+	@echo "Building and loading netris-operator image..."
+
+e2e-build: kustomize
+	docker build . -t $(E2E_IMG) --build-arg SKIP_TEST=true
+	kind load docker-image $(E2E_IMG) --name $(E2E_CLUSTER_NAME)
+
+e2e-deploy: e2e-build
+	@echo "Installing CRDs..."
+	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	@echo "Deploying netris-operator..."
+	$(KUSTOMIZE) build config/e2e | kubectl apply -f -
+	@echo "Waiting for operator to be ready..."
+	kubectl wait --for=condition=available --timeout=120s deployment/netris-operator-controller-manager -n netris-operator-system
+	@echo "E2E environment ready"
+
+e2e-teardown: ## Delete kind cluster
+	kind delete cluster --name $(E2E_CLUSTER_NAME)
+
+e2e-test: ## Run e2e tests against the kind cluster
+	@echo "Running e2e tests..."
+	go test ./e2e/... --ginkgo.slow-spec-threshold=60s --ginkgo.v -v -count=1
+
+e2e: e2e-setup e2e-deploy e2e-test e2e-teardown ## Run full e2e test cycle

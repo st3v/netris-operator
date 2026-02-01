@@ -1,0 +1,6 @@
+# Minimal config for e2e testing
+# Values are overridden by environment variables
+controller:
+  host: ""
+  login: ""
+  password: ""

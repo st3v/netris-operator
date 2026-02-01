@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: netris-operator-system
+
+resources:
+  - ../default
+
+images:
+  - name: netrisai/netris-operator
+    newTag: e2e
+
+patchesStrategicMerge:
+  - manager-patch.yaml
+
+secretGenerator:
+  - name: netris-creds
+    literals:
+      - host=http://netris-controller-web-service-backend.default.svc.cluster.local:80
+      - login=netris
+      - password=newNet0ps
+
+configMapGenerator:
+  - name: netris-operator-config
+    files:
+      - config.yml

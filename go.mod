@@ -7,6 +7,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/netrisai/netriswebapi v0.0.0-20251111091559-5848d9e0fc36
 	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/ginkgo/v2 v2.1.3
 	github.com/onsi/gomega v1.19.0
 	github.com/r3labs/diff/v2 v2.9.1
 	github.com/sirupsen/logrus v1.8.1

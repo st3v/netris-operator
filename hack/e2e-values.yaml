@@ -1,0 +1,86 @@
+# Minimal Helm values for netris-controller in local e2e testing
+# Optimized for kind clusters with limited resources
+
+# Use smaller resource requests for local development
+web-service-backend:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+web-service-frontend:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+grpc:
+  replicaCount: 0
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+telescope:
+  replicaCount: 0
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+haproxy:
+  enabled: false
+  replicaCount: 0
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+mariadb:
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+mongodb:
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+redis:
+  cluster:
+    enabled: false
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+# Default credentials (from netris-controller chart)
+# Web login: netris / newNet0ps

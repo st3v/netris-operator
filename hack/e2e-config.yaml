@@ -1,0 +1,12 @@
+# E2E test configuration for netris-operator
+# Points to netris-controller running in the same kind cluster
+
+controller:
+  # Service DNS name within the cluster
+  host: http://netris-controller-web-service-backend.default.svc.cluster.local:80
+  login: netris
+  password: newNet0ps
+  insecure: true
+
+logdevmode: true
+requeueinterval: 5

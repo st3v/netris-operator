@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      volumes:
+        - name: config-volume
+          configMap:
+            name: netris-operator-config
+      containers:
+        - name: manager
+          imagePullPolicy: Never
+          env:
+            - name: CONTROLLER_INSECURE
+              value: "true"
+          volumeMounts:
+            - name: config-volume
+              mountPath: /configloader
