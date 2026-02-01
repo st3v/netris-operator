@@ -150,6 +150,7 @@ func SubnetMetaToNetrisUpdate(subnetMeta *k8sv1alpha1.SubnetMeta) (*ipam.Subnet,
 		Purpose:        subnetMeta.Spec.Purpose,
 		DefaultGateway: subnetMeta.Spec.DefaultGateway,
 		Sites:          sites,
+		Tags:           []string{},
 	}
 
 	return subnetAdd, nil

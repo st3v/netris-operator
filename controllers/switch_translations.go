@@ -42,7 +42,14 @@ func (r *SwitchReconciler) SwitchToSwitchMeta(switchH *k8sv1alpha1.Switch) (*k8s
 		nosMap[nos.Tag] = *nos
 	}
 
-	nos := nosMap[switchH.Spec.NOS]
+	nos, ok := nosMap[switchH.Spec.NOS]
+	if !ok {
+		var validTags []string
+		for tag := range nosMap {
+			validTags = append(validTags, tag)
+		}
+		return nil, fmt.Errorf("invalid NOS '%s', valid options are: %v", switchH.Spec.NOS, validTags)
+	}
 
 	if i, ok := switchH.GetAnnotations()["resource.k8s.netris.ai/import"]; ok && i == "true" {
 		imported = true
@@ -178,6 +185,7 @@ func SwitchMetaToNetris(switchMeta *k8sv1alpha1.SwitchMeta) (*inventory.HWSwitch
 		PortCount:   switchMeta.Spec.PortsCount,
 		MacAddress:  switchMeta.Spec.MacAddress,
 		Links:       []inventory.HWLink{},
+		Tags:        []string{},
 	}
 
 	return switchAdd, nil
@@ -213,6 +221,7 @@ func SwitchMetaToNetrisUpdate(switchMeta *k8sv1alpha1.SwitchMeta) (*inventory.HW
 		PortCount:   switchMeta.Spec.PortsCount,
 		MacAddress:  "",
 		Links:       []inventory.HWLink{},
+		Tags:        []string{},
 	}
 
 	return switchUpdate, nil
