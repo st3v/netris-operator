@@ -134,3 +134,7 @@ helm-push: helm
 	git add charts && git commit -m $$HELM_CHART_REPO_COMMIT_MSG && git push -u origin main ;\
 	rm -rf $$HELM_CHART_GEN_TMP_DIR ;\
 	}
+
+# Unit tests
+unit-test:
+	go test -short $$(go list ./... | grep -v /e2e) --cover
