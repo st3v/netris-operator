@@ -83,6 +83,7 @@ func (r *SoftgateReconciler) SoftgateToSoftgateMeta(softgate *k8sv1alpha1.Softga
 			TenantID:     tenantID,
 			SiteID:       siteID,
 			ProfileID:    profileID,
+			Flavor:       softgate.Spec.Flavor,
 			MainIP:       softgate.Spec.MainIP,
 			MgmtIP:       softgate.Spec.MgmtIP,
 		},
@@ -147,9 +148,11 @@ func SoftgateMetaToNetris(softgateMeta *k8sv1alpha1.SoftgateMeta) (*inventory.HW
 		Tenant:      inventory.IDName{ID: softgateMeta.Spec.TenantID},
 		Site:        inventory.IDName{ID: softgateMeta.Spec.SiteID},
 		Profile:     inventory.IDName{ID: softgateMeta.Spec.ProfileID},
+		SGFlavor:    softgateMeta.Spec.Flavor,
 		MainAddress: mainIP,
 		MgmtAddress: mgmtIP,
 		Links:       []inventory.HWLink{},
+		Tags:        []string{},
 	}
 
 	return softgateAdd, nil
@@ -173,9 +176,11 @@ func SoftgateMetaToNetrisUpdate(softgateMeta *k8sv1alpha1.SoftgateMeta) (*invent
 		Tenant:      inventory.IDName{ID: softgateMeta.Spec.TenantID},
 		Site:        inventory.IDName{ID: softgateMeta.Spec.SiteID},
 		Profile:     inventory.IDName{ID: softgateMeta.Spec.ProfileID},
+		SGFlavor:    softgateMeta.Spec.Flavor,
 		MainAddress: mainIP,
 		MgmtAddress: mgmtIP,
 		Links:       []inventory.HWLink{},
+		Tags:        []string{},
 	}
 
 	return softgateUpdate, nil
@@ -214,6 +219,11 @@ func compareSoftgateMetaAPIESoftgate(softgateMeta *k8sv1alpha1.SoftgateMeta, api
 
 	if apiSoftgate.MgmtIP.Address != softgateMeta.Spec.MgmtIP {
 		logger.Info("MgmtIP changed", "netrisValue", apiSoftgate.MgmtIP.Address, "k8sValue", softgateMeta.Spec.MgmtIP)
+		return false
+	}
+
+	if apiSoftgate.SGFlavor != softgateMeta.Spec.Flavor {
+		logger.Info("Flavor changed", "netrisValue", apiSoftgate.SGFlavor, "k8sValue", softgateMeta.Spec.Flavor)
 		return false
 	}
 

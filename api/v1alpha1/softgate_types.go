@@ -32,6 +32,9 @@ type SoftgateSpec struct { // INSERT ADDITIONAL SPEC FIELDS - desired state of c
 	Site        string `json:"site,omitempty"`
 	Profile     string `json:"profile,omitempty"`
 
+	// +kubebuilder:validation:Enum="sg-pro";"sg-hs"
+	Flavor string `json:"flavor,omitempty"`
+
 	// +kubebuilder:validation:Pattern=`^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$`
 	MainIP string `json:"mainIp,omitempty"`
 

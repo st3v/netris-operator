@@ -202,6 +202,95 @@ func TestSoftgateUpdateDefaultAnnotations(t *testing.T) {
 	}
 }
 
+func TestSoftgateMetaToNetris(t *testing.T) {
+	tests := []struct {
+		name             string
+		softgateMeta     *k8sv1alpha1.SoftgateMeta
+		expectedFlavor   string
+		expectedMainAddr string
+		expectedMgmtAddr string
+	}{
+		{
+			name: "with sg-pro flavor",
+			softgateMeta: &k8sv1alpha1.SoftgateMeta{
+				Spec: k8sv1alpha1.SoftgateMetaSpec{
+					SoftgateName: "test-softgate",
+					TenantID:     1,
+					SiteID:       2,
+					ProfileID:    3,
+					Flavor:       "sg-pro",
+					MainIP:       "10.0.0.1",
+					MgmtIP:       "192.168.1.1",
+				},
+			},
+			expectedFlavor:   "sg-pro",
+			expectedMainAddr: "10.0.0.1",
+			expectedMgmtAddr: "192.168.1.1",
+		},
+		{
+			name: "with sg-hs flavor",
+			softgateMeta: &k8sv1alpha1.SoftgateMeta{
+				Spec: k8sv1alpha1.SoftgateMetaSpec{
+					SoftgateName: "test-softgate",
+					Flavor:       "sg-hs",
+					MainIP:       "10.0.0.2",
+					MgmtIP:       "192.168.1.2",
+				},
+			},
+			expectedFlavor:   "sg-hs",
+			expectedMainAddr: "10.0.0.2",
+			expectedMgmtAddr: "192.168.1.2",
+		},
+		{
+			name: "empty flavor",
+			softgateMeta: &k8sv1alpha1.SoftgateMeta{
+				Spec: k8sv1alpha1.SoftgateMetaSpec{
+					SoftgateName: "test-softgate",
+					Flavor:       "",
+					MainIP:       "10.0.0.3",
+					MgmtIP:       "192.168.1.3",
+				},
+			},
+			expectedFlavor:   "",
+			expectedMainAddr: "10.0.0.3",
+			expectedMgmtAddr: "192.168.1.3",
+		},
+		{
+			name: "auto IPs when empty",
+			softgateMeta: &k8sv1alpha1.SoftgateMeta{
+				Spec: k8sv1alpha1.SoftgateMetaSpec{
+					SoftgateName: "test-softgate",
+					Flavor:       "sg-pro",
+					MainIP:       "",
+					MgmtIP:       "",
+				},
+			},
+			expectedFlavor:   "sg-pro",
+			expectedMainAddr: "auto",
+			expectedMgmtAddr: "auto",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := SoftgateMetaToNetris(tt.softgateMeta)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if result.SGFlavor != tt.expectedFlavor {
+				t.Errorf("SGFlavor: got %q, expected %q", result.SGFlavor, tt.expectedFlavor)
+			}
+			if result.MainAddress != tt.expectedMainAddr {
+				t.Errorf("MainAddress: got %q, expected %q", result.MainAddress, tt.expectedMainAddr)
+			}
+			if result.MgmtAddress != tt.expectedMgmtAddr {
+				t.Errorf("MgmtAddress: got %q, expected %q", result.MgmtAddress, tt.expectedMgmtAddr)
+			}
+		})
+	}
+}
+
 func TestCompareSoftgateMetaAPIESoftgate(t *testing.T) {
 	tests := []struct {
 		name         string

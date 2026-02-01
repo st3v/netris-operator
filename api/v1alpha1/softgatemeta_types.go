@@ -38,6 +38,7 @@ type SoftgateMetaSpec struct {
 	Description string `json:"description,omitempty"`
 	SiteID      int    `json:"siteid,omitempty"`
 	ProfileID   int    `json:"profileid,omitempty"`
+	Flavor      string `json:"flavor,omitempty"`
 	MainIP      string `json:"mainIp,omitempty"`
 	MgmtIP      string `json:"mgmtIp,omitempty"`
 }
