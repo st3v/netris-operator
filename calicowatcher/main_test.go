@@ -392,16 +392,16 @@ func TestGetBGPs(t *testing.T) {
 	scheme := newTestScheme()
 
 	tests := []struct {
-		name        string
+		name         string
 		existingBGPs []v1alpha1.BGP
-		wantCount   int
-		wantErr     bool
+		wantCount    int
+		wantErr      bool
 	}{
 		{
-			name:        "no BGPs exist",
+			name:         "no BGPs exist",
 			existingBGPs: []v1alpha1.BGP{},
-			wantCount:   0,
-			wantErr:     false,
+			wantCount:    0,
+			wantErr:      false,
 		},
 		{
 			name: "multiple BGPs exist",
@@ -700,10 +700,10 @@ func TestUpdateBGPConfMesh(t *testing.T) {
 
 // mockK8sClient is a mock implementation of K8sClient for testing
 type mockK8sClient struct {
-	nodes         *v1.NodeList
-	patchedNode   *v1.Node
-	listNodesErr  error
-	patchNodeErr  error
+	nodes        *v1.NodeList
+	patchedNode  *v1.Node
+	listNodesErr error
+	patchNodeErr error
 }
 
 func (m *mockK8sClient) ListNodes(ctx context.Context, opts metav1.ListOptions) (*v1.NodeList, error) {
@@ -1742,16 +1742,16 @@ func TestNodesProcessingSubnetWithNoSites(t *testing.T) {
 
 // mockCalicoClient is a mock implementation of CalicoClient for testing
 type mockCalicoClient struct {
-	ipPools               []*calico.IPPool
-	bgpConfs              []*calico.BGPConfiguration
-	bgpPeer               *calico.BGPPeer
-	getIPPoolErr          error
-	getBGPConfigurationErr error
+	ipPools                   []*calico.IPPool
+	bgpConfs                  []*calico.BGPConfiguration
+	bgpPeer                   *calico.BGPPeer
+	getIPPoolErr              error
+	getBGPConfigurationErr    error
 	updateBGPConfigurationErr error
-	getBGPPeerErr         error
-	createBGPPeerErr      error
-	updateBGPPeerErr      error
-	deleteBGPPeerErr      error
+	getBGPPeerErr             error
+	createBGPPeerErr          error
+	updateBGPPeerErr          error
+	deleteBGPPeerErr          error
 }
 
 func (m *mockCalicoClient) GetIPPool(config *rest.Config) ([]*calico.IPPool, error) {
@@ -1983,4 +1983,3 @@ func TestUpdateBGPConfMeshWithMock(t *testing.T) {
 		})
 	}
 }
-

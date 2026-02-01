@@ -217,7 +217,6 @@ func TestHWsStorage_FindSoftgateByID_Found(t *testing.T) {
 	}
 }
 
-
 func TestHWsStorage_FindSwitchByID_Found(t *testing.T) {
 	storage := NewHWsStorage()
 	storage.HWs = []*inventory.HW{

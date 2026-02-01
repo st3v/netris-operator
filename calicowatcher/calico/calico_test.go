@@ -21,18 +21,18 @@ import (
 
 func TestNew(t *testing.T) {
 	tests := []struct {
-		name           string
-		options        Options
+		name               string
+		options            Options
 		wantContextTimeout bool
 	}{
 		{
-			name:           "default options",
-			options:        Options{},
+			name:               "default options",
+			options:            Options{},
 			wantContextTimeout: false,
 		},
 		{
-			name:           "custom context timeout",
-			options:        Options{ContextTimeout: 30},
+			name:               "custom context timeout",
+			options:            Options{ContextTimeout: 30},
 			wantContextTimeout: true,
 		},
 	}
@@ -109,24 +109,24 @@ func TestGenerateBGPPeer(t *testing.T) {
 
 func TestIsMissingResource(t *testing.T) {
 	tests := []struct {
-		name    string
-		err     error
-		want    bool
+		name string
+		err  error
+		want bool
 	}{
 		{
-			name:    "missing resource error",
-			err:     errors.New("the server could not find the requested resource"),
-			want:    true,
+			name: "missing resource error",
+			err:  errors.New("the server could not find the requested resource"),
+			want: true,
 		},
 		{
-			name:    "different error",
-			err:     errors.New("connection refused"),
-			want:    false,
+			name: "different error",
+			err:  errors.New("connection refused"),
+			want: false,
 		},
 		{
-			name:    "partial match error",
-			err:     errors.New("the server could not find"),
-			want:    false,
+			name: "partial match error",
+			err:  errors.New("the server could not find"),
+			want: false,
 		},
 	}
 

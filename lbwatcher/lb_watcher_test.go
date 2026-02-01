@@ -47,10 +47,10 @@ func newTestScheme() *runtime.Scheme {
 
 func TestNewWatcher(t *testing.T) {
 	tests := []struct {
-		name     string
-		storage  *netrisstorage.Storage
-		wantErr  bool
-		errMsg   string
+		name    string
+		storage *netrisstorage.Storage
+		wantErr bool
+		errMsg  string
 	}{
 		{
 			name:    "nil storage returns error",
@@ -116,9 +116,9 @@ func TestFilterL4LBs(t *testing.T) {
 			name: "some LBs missing service info",
 			input: []k8sv1alpha1.L4LB{
 				createL4LBWithServiceInfo("lb1", "svc1", "ns1", "uid1"),
-				createL4LBWithServiceInfo("lb2", "", "ns2", "uid2"),     // missing name
-				createL4LBWithServiceInfo("lb3", "svc3", "", "uid3"),    // missing namespace
-				createL4LBWithServiceInfo("lb4", "svc4", "ns4", ""),     // missing uid
+				createL4LBWithServiceInfo("lb2", "", "ns2", "uid2"),  // missing name
+				createL4LBWithServiceInfo("lb3", "svc3", "", "uid3"), // missing namespace
+				createL4LBWithServiceInfo("lb4", "svc4", "ns4", ""),  // missing uid
 				createL4LBWithServiceInfo("lb5", "svc5", "ns5", "uid5"),
 			},
 			expected: 2,
@@ -159,52 +159,52 @@ func createL4LBWithServiceInfo(name, svcName, svcNamespace, svcUID string) k8sv1
 
 func TestCompareBackends(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		backends1 []k8sv1alpha1.L4LBBackend
 		backends2 []k8sv1alpha1.L4LBBackend
-		expected bool
+		expected  bool
 	}{
 		{
-			name:     "both empty",
+			name:      "both empty",
 			backends1: []k8sv1alpha1.L4LBBackend{},
 			backends2: []k8sv1alpha1.L4LBBackend{},
-			expected: true,
+			expected:  true,
 		},
 		{
-			name:     "both nil",
+			name:      "both nil",
 			backends1: nil,
 			backends2: nil,
-			expected: true,
+			expected:  true,
 		},
 		{
-			name:     "same backends same order",
+			name:      "same backends same order",
 			backends1: []k8sv1alpha1.L4LBBackend{"10.0.0.1:8080", "10.0.0.2:8080"},
 			backends2: []k8sv1alpha1.L4LBBackend{"10.0.0.1:8080", "10.0.0.2:8080"},
-			expected: true,
+			expected:  true,
 		},
 		{
-			name:     "same backends different order",
+			name:      "same backends different order",
 			backends1: []k8sv1alpha1.L4LBBackend{"10.0.0.1:8080", "10.0.0.2:8080"},
 			backends2: []k8sv1alpha1.L4LBBackend{"10.0.0.2:8080", "10.0.0.1:8080"},
-			expected: true,
+			expected:  true,
 		},
 		{
-			name:     "different backends",
+			name:      "different backends",
 			backends1: []k8sv1alpha1.L4LBBackend{"10.0.0.1:8080", "10.0.0.2:8080"},
 			backends2: []k8sv1alpha1.L4LBBackend{"10.0.0.1:8080", "10.0.0.3:8080"},
-			expected: false,
+			expected:  false,
 		},
 		{
-			name:     "different lengths",
+			name:      "different lengths",
 			backends1: []k8sv1alpha1.L4LBBackend{"10.0.0.1:8080"},
 			backends2: []k8sv1alpha1.L4LBBackend{"10.0.0.1:8080", "10.0.0.2:8080"},
-			expected: false,
+			expected:  false,
 		},
 		{
-			name:     "one empty one has items",
+			name:      "one empty one has items",
 			backends1: []k8sv1alpha1.L4LBBackend{},
 			backends2: []k8sv1alpha1.L4LBBackend{"10.0.0.1:8080"},
-			expected: false,
+			expected:  false,
 		},
 	}
 
@@ -391,16 +391,16 @@ func TestGetL4LBs(t *testing.T) {
 	scheme := newTestScheme()
 
 	tests := []struct {
-		name      string
+		name        string
 		existingLBs []k8sv1alpha1.L4LB
-		wantCount int
-		wantErr   bool
+		wantCount   int
+		wantErr     bool
 	}{
 		{
-			name:      "no LBs exist",
+			name:        "no LBs exist",
 			existingLBs: []k8sv1alpha1.L4LB{},
-			wantCount: 0,
-			wantErr:   false,
+			wantCount:   0,
+			wantErr:     false,
 		},
 		{
 			name: "multiple LBs exist",
@@ -715,14 +715,14 @@ func createL4LBPtrWithBackends(name, svcName, svcNamespace, svcUID, ip string, b
 
 // mockK8sClient is a mock implementation of K8sClient for testing
 type mockK8sClient struct {
-	services       *v1.ServiceList
-	service        *v1.Service
-	updatedService *v1.Service
-	pods           *v1.PodList
-	listServicesErr      error
-	getServiceErr        error
-	updateServiceErr     error
-	listPodsErr          error
+	services         *v1.ServiceList
+	service          *v1.Service
+	updatedService   *v1.Service
+	pods             *v1.PodList
+	listServicesErr  error
+	getServiceErr    error
+	updateServiceErr error
+	listPodsErr      error
 }
 
 func (m *mockK8sClient) ListServices(ctx context.Context, namespace string, opts metav1.ListOptions) (*v1.ServiceList, error) {
@@ -1056,13 +1056,13 @@ func (f *fakeEventRecorder) AnnotatedEventf(object runtime.Object, annotations m
 
 func TestGenerateLoadBalancers(t *testing.T) {
 	tests := []struct {
-		name       string
-		mock       *mockK8sClient
-		autoIPs    map[string]string
-		lbTimeout  string
-		storage    *netrisstorage.Storage
-		wantCount  int
-		wantErr    bool
+		name        string
+		mock        *mockK8sClient
+		autoIPs     map[string]string
+		lbTimeout   string
+		storage     *netrisstorage.Storage
+		wantCount   int
+		wantErr     bool
 		errContains string
 	}{
 		{

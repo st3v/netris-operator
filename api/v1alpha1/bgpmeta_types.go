@@ -63,6 +63,11 @@ type BGPMetaSpec struct {
 	UpdateSource       string `json:"update_source"`
 	Vlan               int    `json:"vlan"`
 	Weight             int    `json:"weight"`
+	TimerHello         int    `json:"timerHello,omitempty"`
+	TimerHold          int    `json:"timerHold,omitempty"`
+	TimerConnect       int    `json:"timerConnect,omitempty"`
+	RemovePrivateAS    string `json:"removePrivateAS,omitempty"`
+	BFD                string `json:"bfd,omitempty"`
 }
 
 // BGPMetaStatus defines the observed state of BGPMeta

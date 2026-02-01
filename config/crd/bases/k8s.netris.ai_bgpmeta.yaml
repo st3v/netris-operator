@@ -41,6 +41,8 @@ spec:
             properties:
               allowas_in:
                 type: integer
+              bfd:
+                type: string
               bgp_password:
                 type: string
               bgpGeneration:
@@ -101,10 +103,18 @@ spec:
                 type: boolean
               remote_ip:
                 type: string
+              removePrivateAS:
+                type: string
               site:
                 type: string
               status:
                 type: string
+              timerConnect:
+                type: integer
+              timerHello:
+                type: integer
+              timerHold:
+                type: integer
               update_source:
                 type: string
               vlan:

@@ -54,7 +54,6 @@ func TestBGPMetaReconciler_BGPMetaNotFound(t *testing.T) {
 	}
 }
 
-
 func TestBGPMetaReconciler_DeletionWithReclaim_SkipsAPICall(t *testing.T) {
 	scheme := newTestScheme()
 
@@ -211,7 +210,6 @@ func TestBGPMetaReconciler_CreateBGP(t *testing.T) {
 		t.Errorf("expected ID to be set after creation, got 0")
 	}
 }
-
 
 func TestBGPMetaReconciler_DeletionWithID(t *testing.T) {
 	scheme := newTestScheme()
