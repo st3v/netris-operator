@@ -498,4 +498,3 @@ func TestLinkReconciler_MetaFoundGenerationChanged(t *testing.T) {
 		t.Errorf("expected LinkMeta.Spec.LinkCRGeneration to be 2, got %d", updatedMeta.Spec.LinkCRGeneration)
 	}
 }
-

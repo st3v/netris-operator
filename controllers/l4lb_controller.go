@@ -179,15 +179,11 @@ func (r *L4LBReconciler) deleteL4LB(l4lb *k8sv1alpha1.L4LB, l4lbMeta *k8sv1alpha
 
 func (r *L4LBReconciler) deleteCRs(l4lb *k8sv1alpha1.L4LB, l4lbMeta *k8sv1alpha1.L4LBMeta) (ctrl.Result, error) {
 	if l4lbMeta != nil {
-		_, err := r.deleteL4LBMetaCR(l4lbMeta)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("{deleteCRs} %s", err)
+		if res, err := r.deleteL4LBMetaCR(l4lbMeta); err != nil {
+			return res, fmt.Errorf("{deleteCRs} %s", err)
 		}
-	} else {
-		return r.deleteL4LBCR(l4lb)
 	}
-
-	return ctrl.Result{RequeueAfter: requeueInterval}, nil
+	return r.deleteL4LBCR(l4lb)
 }
 
 func (r *L4LBReconciler) deleteL4LBCR(l4lb *k8sv1alpha1.L4LB) (ctrl.Result, error) {
@@ -195,20 +191,19 @@ func (r *L4LBReconciler) deleteL4LBCR(l4lb *k8sv1alpha1.L4LB) (ctrl.Result, erro
 	defer cancel()
 	l4lb.ObjectMeta.SetFinalizers(nil)
 	l4lb.SetFinalizers(nil)
-	if err := r.Update(ctx, l4lb.DeepCopyObject(), &client.UpdateOptions{}); err != nil {
-		return ctrl.Result{}, fmt.Errorf("{deleteL4LBCR} %s", err)
+	if err := r.Update(ctx, l4lb.DeepCopyObject(), &client.UpdateOptions{}); client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{RequeueAfter: requeueInterval}, fmt.Errorf("{deleteL4LBCR} %s", err)
 	}
-
 	return ctrl.Result{}, nil
 }
 
 func (r *L4LBReconciler) deleteL4LBMetaCR(l4lbMeta *k8sv1alpha1.L4LBMeta) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(cntxt, contextTimeout)
 	defer cancel()
-	if err := r.Delete(ctx, l4lbMeta.DeepCopyObject(), &client.DeleteOptions{}); err != nil {
-		return ctrl.Result{}, fmt.Errorf("{deleteL4LBMetaCR} %s", err)
+	if err := r.Delete(ctx, l4lbMeta.DeepCopyObject(), &client.DeleteOptions{}); client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{RequeueAfter: requeueInterval}, fmt.Errorf("{deleteL4LBMetaCR} %s", err)
 	}
-	return ctrl.Result{RequeueAfter: requeueInterval}, nil
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager .

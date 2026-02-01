@@ -52,7 +52,6 @@ func TestLinkMetaReconciler_LinkMetaNotFound(t *testing.T) {
 	}
 }
 
-
 func TestLinkMetaReconciler_DeletionWithReclaim_SkipsAPICall(t *testing.T) {
 	scheme := newTestScheme()
 
@@ -205,7 +204,6 @@ func TestLinkMetaReconciler_CreateLink(t *testing.T) {
 		t.Errorf("expected ID to be set after creation, got empty string")
 	}
 }
-
 
 func TestLinkMetaReconciler_DeletionWithID(t *testing.T) {
 	scheme := newTestScheme()

@@ -55,7 +55,6 @@ func TestL4LBMetaReconciler_L4LBMetaNotFound(t *testing.T) {
 	}
 }
 
-
 func TestL4LBMetaReconciler_DeletionWithReclaim_SkipsAPICall(t *testing.T) {
 	scheme := newTestScheme()
 
@@ -155,8 +154,6 @@ func TestL4LBMetaReconciler_DeletionWithZeroID_SkipsAPICall(t *testing.T) {
 		t.Errorf("expected no requeue, got Requeue=true")
 	}
 }
-
-
 
 func TestL4LBMetaReconciler_DeletionWithID(t *testing.T) {
 	scheme := newTestScheme()
@@ -355,11 +352,11 @@ func TestUpdateL4LBIfNeccesarry(t *testing.T) {
 	scheme := newTestScheme()
 
 	tests := []struct {
-		name         string
-		l4lbCR       *k8sv1alpha1.L4LB
-		l4lbMeta     k8sv1alpha1.L4LBMeta
-		wantUpdate   bool
-		wantIP       string
+		name       string
+		l4lbCR     *k8sv1alpha1.L4LB
+		l4lbMeta   k8sv1alpha1.L4LBMeta
+		wantUpdate bool
+		wantIP     string
 	}{
 		{
 			name: "IP differs - should update",
@@ -436,11 +433,11 @@ func TestUpdateL4LBIfNeccesarry(t *testing.T) {
 
 func TestL4LBMetaReconciler_UpdateL4LB(t *testing.T) {
 	tests := []struct {
-		name         string
-		mockErr      error
-		wantErr      bool
-		errSubstr    string
-		wantRequeue  bool
+		name        string
+		mockErr     error
+		wantErr     bool
+		errSubstr   string
+		wantRequeue bool
 	}{
 		{
 			name:        "success",
