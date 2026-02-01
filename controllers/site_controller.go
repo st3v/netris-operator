@@ -94,7 +94,7 @@ func (r *SiteReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if result.IsZero() {
 			logger.Info("Site deleted")
 		}
-		return ctrl.Result{}, nil
+		return result, nil
 	}
 
 	if siteMustUpdateAnnotations(site) {
@@ -173,15 +173,11 @@ func (r *SiteReconciler) deleteSite(site *k8sv1alpha1.Site, siteMeta *k8sv1alpha
 
 func (r *SiteReconciler) deleteCRs(site *k8sv1alpha1.Site, siteMeta *k8sv1alpha1.SiteMeta) (ctrl.Result, error) {
 	if siteMeta != nil {
-		_, err := r.deleteSiteMetaCR(siteMeta)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("{deleteCRs} %s", err)
+		if res, err := r.deleteSiteMetaCR(siteMeta); err != nil {
+			return res, fmt.Errorf("{deleteCRs} %s", err)
 		}
-	} else {
-		return r.deleteSiteCR(site)
 	}
-
-	return ctrl.Result{RequeueAfter: requeueInterval}, nil
+	return r.deleteSiteCR(site)
 }
 
 func (r *SiteReconciler) deleteSiteCR(site *k8sv1alpha1.Site) (ctrl.Result, error) {
@@ -189,21 +185,20 @@ func (r *SiteReconciler) deleteSiteCR(site *k8sv1alpha1.Site) (ctrl.Result, erro
 	site.SetFinalizers(nil)
 	ctx, cancel := context.WithTimeout(cntxt, contextTimeout)
 	defer cancel()
-	if err := r.Update(ctx, site.DeepCopyObject(), &client.UpdateOptions{}); err != nil {
-		return ctrl.Result{}, fmt.Errorf("{deleteSiteCR} %s", err)
+	if err := r.Update(ctx, site.DeepCopyObject(), &client.UpdateOptions{}); client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{RequeueAfter: requeueInterval}, fmt.Errorf("{deleteSiteCR} %s", err)
 	}
-
 	return ctrl.Result{}, nil
 }
 
 func (r *SiteReconciler) deleteSiteMetaCR(siteMeta *k8sv1alpha1.SiteMeta) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(cntxt, contextTimeout)
 	defer cancel()
-	if err := r.Delete(ctx, siteMeta.DeepCopyObject(), &client.DeleteOptions{}); err != nil {
-		return ctrl.Result{}, fmt.Errorf("{deleteSiteMetaCR} %s", err)
+	if err := r.Delete(ctx, siteMeta.DeepCopyObject(), &client.DeleteOptions{}); client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{RequeueAfter: requeueInterval}, fmt.Errorf("{deleteSiteMetaCR} %s", err)
 	}
 
-	return ctrl.Result{RequeueAfter: requeueInterval}, nil
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager .

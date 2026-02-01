@@ -54,7 +54,6 @@ func TestSiteMetaReconciler_SiteMetaNotFound(t *testing.T) {
 	}
 }
 
-
 func TestSiteMetaReconciler_DeletionWithReclaim_SkipsAPICall(t *testing.T) {
 	scheme := newTestScheme()
 
@@ -214,7 +213,6 @@ func TestSiteMetaReconciler_CreateSite(t *testing.T) {
 		t.Errorf("expected ID to be set after creation, got 0")
 	}
 }
-
 
 func TestSiteMetaReconciler_DeletionWithID(t *testing.T) {
 	scheme := newTestScheme()
