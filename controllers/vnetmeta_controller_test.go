@@ -54,7 +54,6 @@ func TestVNetMetaReconciler_VNetMetaNotFound(t *testing.T) {
 	}
 }
 
-
 func TestVNetMetaReconciler_DeletionWithReclaim_SkipsAPICall(t *testing.T) {
 	scheme := newTestScheme()
 

@@ -214,6 +214,7 @@ func (r *VNetMetaReconciler) VnetMetaToNetris(vnetMeta *k8sv1alpha1.VNetMeta) (*
 		NativeVlan:   1,
 		Vlan:         vlanidInterface,
 		Tags:         []string{},
+		PortTags:     []vnet.VNetPortTag{},
 	}
 
 	return vnetAdd, nil
