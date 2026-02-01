@@ -156,6 +156,11 @@ func (r *BGPReconciler) BGPToBGPMeta(bgp *k8sv1alpha1.BGP) (*k8sv1alpha1.BGPMeta
 			PrefixListInbound:  strings.Join(bgp.Spec.PrefixListInbound, "\n"),
 			PrefixListOutbound: strings.Join(bgp.Spec.PrefixListOutbound, "\n"),
 			Community:          strings.Join(bgp.Spec.SendBGPCommunity, "\n"),
+			TimerHello:         bgp.Spec.Timers.Hello,
+			TimerHold:          bgp.Spec.Timers.Hold,
+			TimerConnect:       bgp.Spec.Timers.Connect,
+			RemovePrivateAS:    bgp.Spec.RemovePrivateAS,
+			BFD:                bgp.Spec.BFD,
 		},
 	}
 
@@ -195,6 +200,9 @@ func bgpUpdateDefaultAnnotations(bgp *k8sv1alpha1.BGP) {
 		reclaim = "retain"
 	}
 	annotations := bgp.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
 	annotations["resource.k8s.netris.ai/import"] = imported
 	annotations["resource.k8s.netris.ai/reclaimPolicy"] = reclaim
 	bgp.SetAnnotations(annotations)
@@ -221,8 +229,19 @@ func BGPMetaToNetris(bgpMeta *k8sv1alpha1.BGPMeta) (*bgp.EBGPAdd, error) {
 		untagged = true
 	}
 
+	removePrivateAS := bgpMeta.Spec.RemovePrivateAS
+	if removePrivateAS == "" {
+		removePrivateAS = "disabled"
+	}
+
+	bfd := bgpMeta.Spec.BFD
+	if bfd == "" {
+		bfd = "disabled"
+	}
+
 	bgpAdd := &bgp.EBGPAdd{
 		AllowAsIn:          bgpMeta.Spec.AllowasIn,
+		Bfd:                bfd,
 		BgpPassword:        bgpMeta.Spec.BgpPassword,
 		BgpCommunity:       bgpMeta.Spec.Community,
 		Hardware:           bgp.IDNone{ID: hwID},
@@ -244,7 +263,7 @@ func BGPMetaToNetris(bgpMeta *k8sv1alpha1.BGPMeta) (*bgp.EBGPAdd, error) {
 		PrefixListInbound:  bgpMeta.Spec.PrefixListInbound,
 		PrefixListOutbound: bgpMeta.Spec.PrefixListOutbound,
 		PrependInbound:     bgpMeta.Spec.PrependInbound,
-		PrependOutbound:    bgpMeta.Spec.PrependInbound,
+		PrependOutbound:    bgpMeta.Spec.PrependOutbound,
 		RemoteIP:           bgpMeta.Spec.RemoteIP,
 		Site:               bgp.IDName{Name: bgpMeta.Spec.Site},
 		State:              bgpMeta.Spec.Status,
@@ -253,6 +272,12 @@ func BGPMetaToNetris(bgpMeta *k8sv1alpha1.BGPMeta) (*bgp.EBGPAdd, error) {
 		Weight:             bgpMeta.Spec.Weight,
 		Tags:               []string{},
 		Untagged:           untagged,
+		Timers: bgp.Timers{
+			Hello:   bgpMeta.Spec.TimerHello,
+			Hold:    bgpMeta.Spec.TimerHold,
+			Connect: bgpMeta.Spec.TimerConnect,
+		},
+		RemovePrivateAs: removePrivateAS,
 	}
 
 	return bgpAdd, nil
@@ -273,8 +298,20 @@ func BGPMetaToNetrisUpdate(bgpMeta *k8sv1alpha1.BGPMeta) (*bgp.EBGPUpdate, error
 	} else {
 		hwID = "auto"
 	}
+
+	removePrivateAS := bgpMeta.Spec.RemovePrivateAS
+	if removePrivateAS == "" {
+		removePrivateAS = "disabled"
+	}
+
+	bfd := bgpMeta.Spec.BFD
+	if bfd == "" {
+		bfd = "disabled"
+	}
+
 	bgpAdd := &bgp.EBGPUpdate{
 		AllowAsIn:          bgpMeta.Spec.AllowasIn,
+		Bfd:                bfd,
 		BgpPassword:        bgpMeta.Spec.BgpPassword,
 		BgpCommunity:       bgpMeta.Spec.Community,
 		Description:        bgpMeta.Spec.Description,
@@ -293,7 +330,7 @@ func BGPMetaToNetrisUpdate(bgpMeta *k8sv1alpha1.BGPMeta) (*bgp.EBGPUpdate, error
 		PrefixListInbound:  bgpMeta.Spec.PrefixListInbound,
 		PrefixListOutbound: bgpMeta.Spec.PrefixListOutbound,
 		PrependInbound:     bgpMeta.Spec.PrependInbound,
-		PrependOutbound:    bgpMeta.Spec.PrependInbound,
+		PrependOutbound:    bgpMeta.Spec.PrependOutbound,
 		RemoteIP:           bgpMeta.Spec.RemoteIP,
 		Site:               bgp.IDName{Name: bgpMeta.Spec.Site},
 		State:              bgpMeta.Spec.Status,
@@ -304,6 +341,12 @@ func BGPMetaToNetrisUpdate(bgpMeta *k8sv1alpha1.BGPMeta) (*bgp.EBGPUpdate, error
 		Vlan:               bgpMeta.Spec.Vlan,
 		Weight:             bgpMeta.Spec.Weight,
 		Tags:               []string{},
+		Timers: bgp.Timers{
+			Hello:   bgpMeta.Spec.TimerHello,
+			Hold:    bgpMeta.Spec.TimerHold,
+			Connect: bgpMeta.Spec.TimerConnect,
+		},
+		RemovePrivateAs: removePrivateAS,
 	}
 
 	return bgpAdd, nil
@@ -397,7 +440,7 @@ func compareBGPMetaAPIEBGP(bgpMeta *k8sv1alpha1.BGPMeta, apiBGP *bgp.EBGP, stora
 		logger.Info("PrependInbound changed", "netrisValue", apiBGP.PrependInbound, "k8sValue", bgpMeta.Spec.PrependInbound)
 		return false
 	}
-	if apiBGP.PrependOutbound != bgpMeta.Spec.PrependInbound {
+	if apiBGP.PrependOutbound != bgpMeta.Spec.PrependOutbound {
 		logger.Info("PrependOutbound changed", "netrisValue", apiBGP.PrependOutbound, "k8sValue", bgpMeta.Spec.PrependOutbound)
 		return false
 	}
@@ -433,6 +476,34 @@ func compareBGPMetaAPIEBGP(bgpMeta *k8sv1alpha1.BGPMeta, apiBGP *bgp.EBGP, stora
 	}
 	if apiBGP.Weight != bgpMeta.Spec.Weight {
 		logger.Info("Weight changed", "netrisValue", apiBGP.Weight, "k8sValue", bgpMeta.Spec.Weight)
+		return false
+	}
+	if apiBGP.Timers.Hello != bgpMeta.Spec.TimerHello {
+		logger.Info("TimerHello changed", "netrisValue", apiBGP.Timers.Hello, "k8sValue", bgpMeta.Spec.TimerHello)
+		return false
+	}
+	if apiBGP.Timers.Hold != bgpMeta.Spec.TimerHold {
+		logger.Info("TimerHold changed", "netrisValue", apiBGP.Timers.Hold, "k8sValue", bgpMeta.Spec.TimerHold)
+		return false
+	}
+	if apiBGP.Timers.Connect != bgpMeta.Spec.TimerConnect {
+		logger.Info("TimerConnect changed", "netrisValue", apiBGP.Timers.Connect, "k8sValue", bgpMeta.Spec.TimerConnect)
+		return false
+	}
+	removePrivateAS := bgpMeta.Spec.RemovePrivateAS
+	if removePrivateAS == "" {
+		removePrivateAS = "disabled"
+	}
+	if apiBGP.RemovePrivateAs != removePrivateAS {
+		logger.Info("RemovePrivateAs changed", "netrisValue", apiBGP.RemovePrivateAs, "k8sValue", removePrivateAS)
+		return false
+	}
+	bfd := bgpMeta.Spec.BFD
+	if bfd == "" {
+		bfd = "disabled"
+	}
+	if apiBGP.Bfd != bfd {
+		logger.Info("Bfd changed", "netrisValue", apiBGP.Bfd, "k8sValue", bfd)
 		return false
 	}
 

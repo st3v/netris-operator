@@ -218,16 +218,22 @@ func TestBgpMustUpdateAnnotations(t *testing.T) {
 
 func TestBgpUpdateDefaultAnnotations(t *testing.T) {
 	tests := []struct {
-		name                   string
-		annotations            map[string]string
-		expectedImport         string
-		expectedReclaimPolicy  string
+		name                  string
+		annotations           map[string]string
+		expectedImport        string
+		expectedReclaimPolicy string
 	}{
 		{
-			name:                   "empty annotations get defaults",
-			annotations:            map[string]string{},
-			expectedImport:         "false",
-			expectedReclaimPolicy:  "delete",
+			name:                  "nil annotations get defaults",
+			annotations:           nil,
+			expectedImport:        "false",
+			expectedReclaimPolicy: "delete",
+		},
+		{
+			name:                  "empty annotations get defaults",
+			annotations:           map[string]string{},
+			expectedImport:        "false",
+			expectedReclaimPolicy: "delete",
 		},
 		{
 			name: "preserves import true",
@@ -280,9 +286,9 @@ func TestBgpUpdateDefaultAnnotations(t *testing.T) {
 
 func TestOptionalRouteMapID(t *testing.T) {
 	tests := []struct {
-		name        string
-		value       int
-		expectNil   bool
+		name      string
+		value     int
+		expectNil bool
 	}{
 		{
 			name:      "zero returns nil",
@@ -336,12 +342,12 @@ func TestBGPMetaToNetrisUpdate(t *testing.T) {
 			name: "basic conversion",
 			bgpMeta: &k8sv1alpha1.BGPMeta{
 				Spec: k8sv1alpha1.BGPMetaSpec{
-					BGPName:   "test-bgp",
-					Site:      "site-1",
-					LocalIP:   "10.0.0.1",
-					RemoteIP:  "10.0.0.2",
+					BGPName:    "test-bgp",
+					Site:       "site-1",
+					LocalIP:    "10.0.0.1",
+					RemoteIP:   "10.0.0.2",
 					NeighborAs: 65000,
-					Status:    "enabled",
+					Status:     "enabled",
 				},
 			},
 			expectedName: "test-bgp",
@@ -352,10 +358,10 @@ func TestBGPMetaToNetrisUpdate(t *testing.T) {
 			name: "with vnet",
 			bgpMeta: &k8sv1alpha1.BGPMeta{
 				Spec: k8sv1alpha1.BGPMetaSpec{
-					BGPName:   "bgp-with-vnet",
-					Site:      "site-2",
-					VnetID:    100,
-					LocalIP:   "192.168.1.1",
+					BGPName:    "bgp-with-vnet",
+					Site:       "site-2",
+					VnetID:     100,
+					LocalIP:    "192.168.1.1",
 					NeighborAs: 65001,
 				},
 			},
@@ -425,6 +431,7 @@ func TestCompareBGPMetaAPIEBGP(t *testing.T) {
 			},
 			apiBGP: &bgp.EBGP{
 				AllowasIn:          2,
+				Bfd:                "disabled",
 				BgpPassword:        "secret",
 				Community:          "65000:100",
 				Description:        "Test BGP",
@@ -445,6 +452,7 @@ func TestCompareBGPMetaAPIEBGP(t *testing.T) {
 				PrependInbound:     1,
 				PrependOutbound:    1,
 				RemoteIP:           "10.0.0.3",
+				RemovePrivateAs:    "disabled",
 				SiteName:           "site-1",
 				Status:             "enabled",
 				UpdateSource:       "loopback",
@@ -670,8 +678,10 @@ func TestCompareBGPMetaAPIEBGP(t *testing.T) {
 				},
 			},
 			apiBGP: &bgp.EBGP{
-				Name: "test-bgp",
-				Vlan: 200,
+				Name:            "test-bgp",
+				Vlan:            200,
+				Bfd:             "disabled",
+				RemovePrivateAs: "disabled",
 			},
 			wantMatch: true,
 		},
@@ -686,6 +696,8 @@ func TestCompareBGPMetaAPIEBGP(t *testing.T) {
 			apiBGP: &bgp.EBGP{
 				Name:            "test-bgp",
 				NeighborAddress: "",
+				Bfd:             "disabled",
+				RemovePrivateAs: "disabled",
 			},
 			wantMatch: true,
 		},
@@ -701,8 +713,80 @@ func TestCompareBGPMetaAPIEBGP(t *testing.T) {
 				Name:              "test-bgp",
 				PrefixLimit:       1000,
 				TerminateOnSwitch: "yes",
+				Bfd:               "disabled",
+				RemovePrivateAs:   "disabled",
 			},
 			wantMatch: true,
+		},
+		{
+			name: "timers match",
+			bgpMeta: &k8sv1alpha1.BGPMeta{
+				Spec: k8sv1alpha1.BGPMetaSpec{
+					BGPName:      "test-bgp",
+					TimerHello:   3,
+					TimerHold:    10,
+					TimerConnect: 10,
+				},
+			},
+			apiBGP: &bgp.EBGP{
+				Name: "test-bgp",
+				Timers: bgp.Timers{
+					Hello:   3,
+					Hold:    10,
+					Connect: 10,
+				},
+				Bfd:             "disabled",
+				RemovePrivateAs: "disabled",
+			},
+			wantMatch: true,
+		},
+		{
+			name: "timer hello mismatch",
+			bgpMeta: &k8sv1alpha1.BGPMeta{
+				Spec: k8sv1alpha1.BGPMetaSpec{
+					BGPName:    "test-bgp",
+					TimerHello: 3,
+				},
+			},
+			apiBGP: &bgp.EBGP{
+				Name: "test-bgp",
+				Timers: bgp.Timers{
+					Hello: 5,
+				},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "timer hold mismatch",
+			bgpMeta: &k8sv1alpha1.BGPMeta{
+				Spec: k8sv1alpha1.BGPMetaSpec{
+					BGPName:   "test-bgp",
+					TimerHold: 10,
+				},
+			},
+			apiBGP: &bgp.EBGP{
+				Name: "test-bgp",
+				Timers: bgp.Timers{
+					Hold: 20,
+				},
+			},
+			wantMatch: false,
+		},
+		{
+			name: "timer connect mismatch",
+			bgpMeta: &k8sv1alpha1.BGPMeta{
+				Spec: k8sv1alpha1.BGPMetaSpec{
+					BGPName:      "test-bgp",
+					TimerConnect: 10,
+				},
+			},
+			apiBGP: &bgp.EBGP{
+				Name: "test-bgp",
+				Timers: bgp.Timers{
+					Connect: 20,
+				},
+			},
+			wantMatch: false,
 		},
 	}
 
@@ -711,6 +795,72 @@ func TestCompareBGPMetaAPIEBGP(t *testing.T) {
 			got := compareBGPMetaAPIEBGP(tt.bgpMeta, tt.apiBGP, newTestStorage(nil), newTestLogger())
 			if got != tt.wantMatch {
 				t.Errorf("got %v, want %v", got, tt.wantMatch)
+			}
+		})
+	}
+}
+
+func TestBGPMetaToNetris(t *testing.T) {
+	tests := []struct {
+		name           string
+		bgpMeta        *k8sv1alpha1.BGPMeta
+		expectedTimers bgp.Timers
+	}{
+		{
+			name: "with timers",
+			bgpMeta: &k8sv1alpha1.BGPMeta{
+				Spec: k8sv1alpha1.BGPMetaSpec{
+					BGPName:      "test-bgp",
+					Site:         "site-1",
+					LocalIP:      "10.0.0.1",
+					RemoteIP:     "10.0.0.2",
+					NeighborAs:   65000,
+					Status:       "enabled",
+					TimerHello:   3,
+					TimerHold:    10,
+					TimerConnect: 10,
+				},
+			},
+			expectedTimers: bgp.Timers{
+				Hello:   3,
+				Hold:    10,
+				Connect: 10,
+			},
+		},
+		{
+			name: "without timers (zero values)",
+			bgpMeta: &k8sv1alpha1.BGPMeta{
+				Spec: k8sv1alpha1.BGPMetaSpec{
+					BGPName:    "test-bgp",
+					Site:       "site-1",
+					LocalIP:    "10.0.0.1",
+					RemoteIP:   "10.0.0.2",
+					NeighborAs: 65000,
+					Status:     "enabled",
+				},
+			},
+			expectedTimers: bgp.Timers{
+				Hello:   0,
+				Hold:    0,
+				Connect: 0,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := BGPMetaToNetris(tt.bgpMeta)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Timers.Hello != tt.expectedTimers.Hello {
+				t.Errorf("Timers.Hello: got %d, expected %d", result.Timers.Hello, tt.expectedTimers.Hello)
+			}
+			if result.Timers.Hold != tt.expectedTimers.Hold {
+				t.Errorf("Timers.Hold: got %d, expected %d", result.Timers.Hold, tt.expectedTimers.Hold)
+			}
+			if result.Timers.Connect != tt.expectedTimers.Connect {
+				t.Errorf("Timers.Connect: got %d, expected %d", result.Timers.Connect, tt.expectedTimers.Connect)
 			}
 		})
 	}
